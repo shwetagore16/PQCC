@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Quantum-Safe Asset Scanner Management System</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@300;400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#1773cf",
+                        "background-light": "#f6f7f8",
+                        "background-dark": "#111921",
+                    },
+                    fontFamily: {
+                        "display": ["Inter"]
+                    },
+                    borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style>
+        /* Java Swing inspired scrollbar and subtle borders */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #1a222c;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #334155;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #475569;
+        }
+        .swing-border {
+            border: 1px solid rgba(23, 115, 207, 0.2);
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-slate-100 overflow-hidden">
+<div class="flex h-screen w-full">
+<!-- Sidebar Navigation -->
+<aside class="w-64 flex flex-col bg-slate-100 dark:bg-background-dark border-r border-slate-200 dark:border-slate-800">
+<div class="p-6 flex items-center gap-3">
+<div class="size-10 bg-primary rounded-lg flex items-center justify-center text-white">
+<span class="material-symbols-outlined text-2xl">shield_lock</span>
+</div>
+<div class="flex flex-col">
+<h1 class="text-sm font-bold tracking-tight uppercase text-primary">Quantum-Safe</h1>
+<p class="text-[10px] text-slate-500 dark:text-slate-400 font-medium tracking-widest">ASSET SCANNER</p>
+</div>
+</div>
+<nav class="flex-1 px-4 space-y-1 overflow-y-auto">
+<div class="flex items-center gap-3 px-3 py-2 rounded bg-primary text-white cursor-pointer transition-colors">
+<span class="material-symbols-outlined text-[20px]">dashboard</span>
+<span class="text-sm font-medium">Dashboard</span>
+</div>
+<div class="flex items-center gap-3 px-3 py-2 rounded text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-800 cursor-pointer transition-colors">
+<span class="material-symbols-outlined text-[20px]">inventory_2</span>
+<span class="text-sm font-medium">Asset Management</span>
+</div>
+<div class="flex items-center gap-3 px-3 py-2 rounded text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-800 cursor-pointer transition-colors">
+<span class="material-symbols-outlined text-[20px]">play_circle</span>
+<span class="text-sm font-medium">Run Scan</span>
+</div>
+<div class="flex items-center gap-3 px-3 py-2 rounded text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-800 cursor-pointer transition-colors">
+<span class="material-symbols-outlined text-[20px]">receipt_long</span>
+<span class="text-sm font-medium">Scan Results</span>
+</div>
+<div class="flex items-center gap-3 px-3 py-2 rounded text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-800 cursor-pointer transition-colors">
+<span class="material-symbols-outlined text-[20px]">list_alt</span>
+<span class="text-sm font-medium">CBOM Records</span>
+</div>
+<div class="flex items-center gap-3 px-3 py-2 rounded text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-800 cursor-pointer transition-colors">
+<span class="material-symbols-outlined text-[20px]">report_problem</span>
+<span class="text-sm font-medium">Risk Analysis</span>
+</div>
+<div class="flex items-center gap-3 px-3 py-2 rounded text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-800 cursor-pointer transition-colors">
+<span class="material-symbols-outlined text-[20px]">category</span>
+<span class="text-sm font-medium">PQC Classification</span>
+</div>
+<div class="flex items-center gap-3 px-3 py-2 rounded text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-800 cursor-pointer transition-colors">
+<span class="material-symbols-outlined text-[20px]">bar_chart</span>
+<span class="text-sm font-medium">Reports</span>
+</div>
+<div class="mt-8 border-t border-slate-200 dark:border-slate-800 pt-4">
+<div class="flex items-center gap-3 px-3 py-2 rounded text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-800 cursor-pointer transition-colors">
+<span class="material-symbols-outlined text-[20px]">group</span>
+<span class="text-sm font-medium">User Management</span>
+</div>
+<div class="flex items-center gap-3 px-3 py-2 rounded text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-800 cursor-pointer transition-colors">
+<span class="material-symbols-outlined text-[20px]">settings</span>
+<span class="text-sm font-medium">Settings</span>
+</div>
+<div class="flex items-center gap-3 px-3 py-2 rounded text-red-500 hover:bg-red-50 dark:hover:bg-red-900/10 cursor-pointer transition-colors">
+<span class="material-symbols-outlined text-[20px]">logout</span>
+<span class="text-sm font-medium">Logout</span>
+</div>
+</div>
+</nav>
+<div class="p-4 bg-slate-200/50 dark:bg-slate-800/50">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded bg-primary/20 flex items-center justify-center text-primary font-bold text-xs">JD</div>
+<div class="flex-1 overflow-hidden">
+<p class="text-xs font-semibold truncate">John Doe</p>
+<p class="text-[10px] text-slate-500 truncate">Security Architect</p>
+</div>
+</div>
+</div>
+</aside>
+<!-- Main Content -->
+<main class="flex-1 flex flex-col min-w-0 bg-slate-50 dark:bg-[#0d141b]">
+<!-- Top Header -->
+<header class="h-16 flex items-center justify-between px-6 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-background-dark">
+<div class="flex items-center gap-4 flex-1 max-w-xl">
+<div class="relative w-full">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-lg">search</span>
+<input class="w-full bg-slate-100 dark:bg-slate-800/50 border-none rounded-lg pl-10 pr-4 py-2 text-sm focus:ring-2 focus:ring-primary/40 transition-all" placeholder="Search assets, scans, or reports..." type="text"/>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<button class="p-2 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg relative">
+<span class="material-symbols-outlined">notifications</span>
+<span class="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-white dark:border-background-dark"></span>
+</button>
+<button class="p-2 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg">
+<span class="material-symbols-outlined">help_outline</span>
+</button>
+<div class="h-8 w-px bg-slate-200 dark:border-slate-800 mx-2"></div>
+<div class="size-8 rounded-full overflow-hidden bg-slate-200 ring-2 ring-primary/20">
+<img alt="Profile" class="w-full h-full object-cover" data-alt="User profile avatar" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAKYw4oR8B29I9YWP_HSc7OmQbOoSrDqP0uI4T-kVT_GiyEI3qg7Nv1sXCqd1PPFkxC-xiUzDmC7tKCElZr7CxwLVpM2hldJ8xK5kMCfc7G99wOsZKe05bWMA6AL2rWGEaCRyN35zQjbW574qdaUvc1LXKzeuwBB1do74gddG9pV-MCELbrygZJFn_jtwKoi9OQ3GwG72j26qyveYj04TP7fa98-1Mozvr5rpRoSCK1mhlt2mlzicEKSgz_YL3Ruf3VC7TU_j-5Xm4"/>
+</div>
+</div>
+</header>
+<!-- Dashboard Content -->
+<div class="flex-1 overflow-y-auto p-6 space-y-6">
+<!-- Status Widgets -->
+<div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
+<div class="bg-white dark:bg-slate-800/40 p-4 rounded-lg border border-slate-200 dark:border-slate-800 swing-border">
+<div class="flex justify-between items-start mb-2">
+<p class="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Total Assets</p>
+<span class="material-symbols-outlined text-primary text-xl">devices</span>
+</div>
+<p class="text-2xl font-bold">2,540</p>
+<p class="text-[11px] text-green-500 mt-1 flex items-center font-medium">
+<span class="material-symbols-outlined text-[14px]">arrow_upward</span> 5.2%
+                        </p>
+</div>
+<div class="bg-white dark:bg-slate-800/40 p-4 rounded-lg border border-slate-200 dark:border-slate-800 swing-border">
+<div class="flex justify-between items-start mb-2">
+<p class="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Scanned</p>
+<span class="material-symbols-outlined text-primary text-xl">biotech</span>
+</div>
+<p class="text-2xl font-bold">2,105</p>
+<p class="text-[11px] text-green-500 mt-1 flex items-center font-medium">
+<span class="material-symbols-outlined text-[14px]">arrow_upward</span> 3.1%
+                        </p>
+</div>
+<div class="bg-white dark:bg-slate-800/40 p-4 rounded-lg border border-slate-200 dark:border-slate-800 swing-border">
+<div class="flex justify-between items-start mb-2">
+<p class="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">High Risk</p>
+<span class="material-symbols-outlined text-red-500 text-xl">warning</span>
+</div>
+<p class="text-2xl font-bold text-red-500">42</p>
+<p class="text-[11px] text-red-500 mt-1 flex items-center font-medium">
+<span class="material-symbols-outlined text-[14px]">arrow_downward</span> 1.5%
+                        </p>
+</div>
+<div class="bg-white dark:bg-slate-800/40 p-4 rounded-lg border border-slate-200 dark:border-slate-800 swing-border">
+<div class="flex justify-between items-start mb-2">
+<p class="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">PQC-Ready</p>
+<span class="material-symbols-outlined text-green-500 text-xl">verified_user</span>
+</div>
+<p class="text-2xl font-bold">1,850</p>
+<p class="text-[11px] text-green-500 mt-1 flex items-center font-medium">
+<span class="material-symbols-outlined text-[14px]">arrow_upward</span> 8.4%
+                        </p>
+</div>
+<div class="bg-white dark:bg-slate-800/40 p-4 rounded-lg border border-slate-200 dark:border-slate-800 swing-border">
+<div class="flex justify-between items-start mb-2">
+<p class="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Non-Ready</p>
+<span class="material-symbols-outlined text-amber-500 text-xl">gpp_maybe</span>
+</div>
+<p class="text-2xl font-bold">255</p>
+<p class="text-[11px] text-green-500 mt-1 flex items-center font-medium">
+<span class="material-symbols-outlined text-[14px]">arrow_upward</span> 2.1%
+                        </p>
+</div>
+<div class="bg-white dark:bg-slate-800/40 p-4 rounded-lg border border-slate-200 dark:border-slate-800 swing-border">
+<div class="flex justify-between items-start mb-2">
+<p class="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Cert Expiring</p>
+<span class="material-symbols-outlined text-amber-500 text-xl">timer</span>
+</div>
+<p class="text-2xl font-bold">12</p>
+<p class="text-[11px] text-red-500 mt-1 flex items-center font-medium">
+<span class="material-symbols-outlined text-[14px]">arrow_downward</span> 0.5%
+                        </p>
+</div>
+</div>
+<!-- Main Grid: Activity & Risk -->
+<div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
+<!-- Recent Scan Activity -->
+<div class="xl:col-span-2 bg-white dark:bg-slate-800/40 rounded-lg border border-slate-200 dark:border-slate-800 overflow-hidden flex flex-col">
+<div class="p-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary">history</span>
+<h3 class="font-bold text-sm">Recent Scan Activity</h3>
+</div>
+<button class="text-[11px] font-bold text-primary hover:underline">VIEW ALL</button>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead class="bg-slate-50 dark:bg-slate-900/50">
+<tr>
+<th class="p-3 text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase">Scan ID</th>
+<th class="p-3 text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase">Target</th>
+<th class="p-3 text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase">Timestamp</th>
+<th class="p-3 text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase">Result</th>
+<th class="p-3 text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase">Action</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-slate-100 dark:divide-slate-800">
+<tr class="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors">
+<td class="p-3 text-xs font-mono">SCN-88219</td>
+<td class="p-3 text-xs">Internal API Gateway</td>
+<td class="p-3 text-xs text-slate-500">2023-11-21 14:22</td>
+<td class="p-3">
+<span class="px-2 py-1 rounded-full text-[10px] font-bold bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">PQC READY</span>
+</td>
+<td class="p-3">
+<button class="material-symbols-outlined text-slate-400 hover:text-primary transition-colors">visibility</button>
+</td>
+</tr>
+<tr class="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors">
+<td class="p-3 text-xs font-mono">SCN-88218</td>
+<td class="p-3 text-xs">Customer Database (PROD)</td>
+<td class="p-3 text-xs text-slate-500">2023-11-21 13:05</td>
+<td class="p-3">
+<span class="px-2 py-1 rounded-full text-[10px] font-bold bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400">CRITICAL RISK</span>
+</td>
+<td class="p-3">
+<button class="material-symbols-outlined text-slate-400 hover:text-primary transition-colors">visibility</button>
+</td>
+</tr>
+<tr class="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors">
+<td class="p-3 text-xs font-mono">SCN-88217</td>
+<td class="p-3 text-xs">Legacy Auth Service</td>
+<td class="p-3 text-xs text-slate-500">2023-11-21 11:45</td>
+<td class="p-3">
+<span class="px-2 py-1 rounded-full text-[10px] font-bold bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">NON-READY</span>
+</td>
+<td class="p-3">
+<button class="material-symbols-outlined text-slate-400 hover:text-primary transition-colors">visibility</button>
+</td>
+</tr>
+<tr class="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors">
+<td class="p-3 text-xs font-mono">SCN-88216</td>
+<td class="p-3 text-xs">VPN Endpoint NYC</td>
+<td class="p-3 text-xs text-slate-500">2023-11-21 09:12</td>
+<td class="p-3">
+<span class="px-2 py-1 rounded-full text-[10px] font-bold bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">PQC READY</span>
+</td>
+<td class="p-3">
+<button class="material-symbols-outlined text-slate-400 hover:text-primary transition-colors">visibility</button>
+</td>
+</tr>
+<tr class="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors">
+<td class="p-3 text-xs font-mono">SCN-88215</td>
+<td class="p-3 text-xs">Public Web Front-end</td>
+<td class="p-3 text-xs text-slate-500">2023-11-21 08:30</td>
+<td class="p-3">
+<span class="px-2 py-1 rounded-full text-[10px] font-bold bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">PQC READY</span>
+</td>
+<td class="p-3">
+<button class="material-symbols-outlined text-slate-400 hover:text-primary transition-colors">visibility</button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<!-- Risk Level Summary -->
+<div class="bg-white dark:bg-slate-800/40 rounded-lg border border-slate-200 dark:border-slate-800 flex flex-col">
+<div class="p-4 border-b border-slate-200 dark:border-slate-800 flex items-center gap-2">
+<span class="material-symbols-outlined text-primary">donut_large</span>
+<h3 class="font-bold text-sm">Risk Level Summary</h3>
+</div>
+<div class="p-6 flex-1 flex flex-col justify-center">
+<div class="flex flex-col gap-6">
+<div>
+<div class="flex justify-between items-center mb-2">
+<span class="text-xs font-medium">Critical Risk</span>
+<span class="text-xs font-bold text-red-500">8%</span>
+</div>
+<div class="w-full h-2 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+<div class="h-full bg-red-500 rounded-full" style="width: 8%"></div>
+</div>
+</div>
+<div>
+<div class="flex justify-between items-center mb-2">
+<span class="text-xs font-medium">High Risk</span>
+<span class="text-xs font-bold text-orange-500">14%</span>
+</div>
+<div class="w-full h-2 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+<div class="h-full bg-orange-500 rounded-full" style="width: 14%"></div>
+</div>
+</div>
+<div>
+<div class="flex justify-between items-center mb-2">
+<span class="text-xs font-medium">Medium Risk</span>
+<span class="text-xs font-bold text-amber-500">22%</span>
+</div>
+<div class="w-full h-2 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+<div class="h-full bg-amber-500 rounded-full" style="width: 22%"></div>
+</div>
+</div>
+<div>
+<div class="flex justify-between items-center mb-2">
+<span class="text-xs font-medium">Safe / PQC Ready</span>
+<span class="text-xs font-bold text-green-500">56%</span>
+</div>
+<div class="w-full h-2 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+<div class="h-full bg-green-500 rounded-full" style="width: 56%"></div>
+</div>
+</div>
+</div>
+<div class="mt-8 pt-6 border-t border-slate-100 dark:border-slate-800 text-center">
+<p class="text-[11px] text-slate-500 dark:text-slate-400">SCAN COVERAGE</p>
+<p class="text-3xl font-bold text-primary">82.8%</p>
+<p class="text-[10px] text-slate-400 mt-1 italic">Scan completed 14 minutes ago</p>
+</div>
+</div>
+</div>
+</div>
+<!-- Bottom Row: PQC Classification & Quick Actions -->
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+<div class="bg-white dark:bg-slate-800/40 p-6 rounded-lg border border-slate-200 dark:border-slate-800">
+<div class="flex items-center gap-2 mb-6">
+<span class="material-symbols-outlined text-primary">analytics</span>
+<h3 class="font-bold text-sm">PQC Transition Readiness</h3>
+</div>
+<div class="h-40 flex items-end justify-between gap-4 px-2">
+<div class="flex-1 flex flex-col items-center gap-2">
+<div class="w-full bg-primary/20 rounded-t h-[30%]"></div>
+<span class="text-[10px] text-slate-500 font-bold">Q3 23</span>
+</div>
+<div class="flex-1 flex flex-col items-center gap-2">
+<div class="w-full bg-primary/40 rounded-t h-[45%]"></div>
+<span class="text-[10px] text-slate-500 font-bold">Q4 23</span>
+</div>
+<div class="flex-1 flex flex-col items-center gap-2">
+<div class="w-full bg-primary/60 rounded-t h-[65%]"></div>
+<span class="text-[10px] text-slate-500 font-bold">Q1 24</span>
+</div>
+<div class="flex-1 flex flex-col items-center gap-2">
+<div class="w-full bg-primary/80 rounded-t h-[80%]"></div>
+<span class="text-[10px] text-slate-500 font-bold">Q2 24</span>
+</div>
+<div class="flex-1 flex flex-col items-center gap-2">
+<div class="w-full bg-primary rounded-t h-[95%]"></div>
+<span class="text-[10px] text-slate-500 font-bold">Q3 24</span>
+</div>
+</div>
+</div>
+<div class="bg-primary text-white p-6 rounded-lg border border-primary relative overflow-hidden group">
+<div class="relative z-10 h-full flex flex-col justify-between">
+<div>
+<h3 class="text-xl font-bold mb-2">Initialize Global Scan</h3>
+<p class="text-primary-100 text-xs opacity-90 leading-relaxed max-w-sm">Run a comprehensive quantum-risk assessment across all registered endpoints and cloud assets in your organization.</p>
+</div>
+<div class="flex gap-4">
+<button class="px-4 py-2 bg-white text-primary rounded font-bold text-xs hover:bg-slate-100 transition-colors">START NEW SCAN</button>
+<button class="px-4 py-2 bg-primary-600 border border-white/30 rounded font-bold text-xs hover:bg-white/10 transition-colors">CONFIGURE PARAMETERS</button>
+</div>
+</div>
+<span class="material-symbols-outlined absolute -bottom-10 -right-10 text-[180px] opacity-10 pointer-events-none group-hover:scale-110 transition-transform">bolt</span>
+</div>
+</div>
+</div>
+<!-- Footer / System Bar -->
+<footer class="h-8 bg-slate-100 dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between px-6">
+<div class="flex items-center gap-4">
+<div class="flex items-center gap-1.5">
+<span class="w-2 h-2 rounded-full bg-green-500"></span>
+<span class="text-[10px] font-bold text-slate-500 dark:text-slate-400">SYSTEM: OPERATIONAL</span>
+</div>
+<div class="h-3 w-px bg-slate-300 dark:bg-slate-700"></div>
+<span class="text-[10px] text-slate-500">Scanner Engine v2.4.12</span>
+</div>
+<div class="flex items-center gap-4">
+<span class="text-[10px] text-slate-500 uppercase tracking-widest font-medium">Quantum-Safe Asset Management System © 2024</span>
+</div>
+</footer>
+</main>
+</div>
+</body></html>

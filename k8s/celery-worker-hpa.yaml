@@ -1,0 +1,128 @@
+# ═══════════════════════════════════════════════════════════════════════════════
+# k8s/celery-worker-hpa.yaml
+# HorizontalPodAutoscaler for PQSS Celery Workers
+# ═══════════════════════════════════════════════════════════════════════════════
+#
+# Scaling strategy (Section 4.4 of SRS):
+#
+#   Primary metric  — Redis queue depth (tasks pending across all 3 queues)
+#     Source: Prometheus / celery-exporter → "celery_queue_length" metric
+#     Threshold: scale-up when avg queue depth per pod > 5 pending tasks
+#
+#   Secondary metric — CPU utilisation
+#     Threshold: scale-up when avg CPU > 70% for 30s
+#
+#   Scale range: 1 → 12 pods
+#
+#   Stabilisation:
+#     Scale-up  : fast  (30s window  — burst scans need workers immediately)
+#     Scale-down : slow (300s window — do not kill workers mid-task)
+#
+# Prerequisites in the cluster:
+#   • Prometheus + Prometheus Adapter installed
+#   • celery-exporter scraping Redis queue depth
+#   • HPA v2 API (K8s >= 1.23)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name:      pqss-celery-worker-hpa
+  namespace: pqss
+  labels:
+    app:       pqss
+    component: celery-worker
+  annotations:
+    pqss.io/scaling-rationale: "Queue-depth-first, CPU-secondary per SRS §4.4"
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind:       Deployment
+    name:       pqss-celery-worker
+
+  # ── Pod count bounds ───────────────────────────────────────────────────────
+  minReplicas: 1
+  maxReplicas: 12
+
+  # ── Scaling metrics (evaluated every 15s by default) ──────────────────────
+  metrics:
+
+    # ── Primary: Redis / Celery queue depth via Prometheus Adapter ──────────
+    # Metric exposed by celery-exporter:
+    #   celery_queue_length{queue="discovery"} N
+    #   celery_queue_length{queue="scanning"}  N
+    #   celery_queue_length{queue="ai"}        N
+    #
+    # The Prometheus Adapter aggregates them into a custom metric:
+    #   custom.metrics.k8s.io/celery_total_queue_depth
+    # (See k8s/prometheus-adapter-config.yaml for the rule)
+    - type: Pods
+      pods:
+        metric:
+          name: celery_total_queue_depth
+        target:
+          type:         AverageValue
+          averageValue: 5   # Scale up when each pod has >5 pending tasks
+
+    # ── Secondary: CPU-based scaling (safety net) ────────────────────────────
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type:               Utilization
+          averageUtilization: 70
+
+    # ── Tertiary: Memory — prevent OOM during large GNN inference batches ────
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type:               Utilization
+          averageUtilization: 80
+
+  # ── Scale-up / scale-down behaviour ───────────────────────────────────────
+  behavior:
+    scaleUp:
+      stabilizationWindowSeconds: 30        # React quickly to bursts
+      selectPolicy: Max                     # Use the most aggressive policy
+      policies:
+        # Allow adding up to 4 pods every 30s (burst capacity for hackathon demos)
+        - type:          Pods
+          value:         4
+          periodSeconds: 30
+        # Or double current replicas — whichever adds more pods
+        - type:          Percent
+          value:         100
+          periodSeconds: 60
+    scaleDown:
+      stabilizationWindowSeconds: 300       # 5-minute cooldown — protect in-flight tasks
+      selectPolicy: Min                     # Conservative: use the least aggressive policy
+      policies:
+        # Remove at most 1 pod per minute on scale-down
+        - type:          Pods
+          value:         1
+          periodSeconds: 60
+
+---
+# ═══════════════════════════════════════════════════════════════════════════════
+# Prometheus Adapter custom metric rule
+# (Deploy via configmap for the prometheus-adapter Helm chart)
+# ═══════════════════════════════════════════════════════════════════════════════
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name:      pqss-prometheus-adapter-rules
+  namespace: monitoring
+data:
+  config.yaml: |
+    rules:
+      - seriesQuery: 'celery_queue_length{namespace="pqss"}'
+        resources:
+          overrides:
+            namespace: { resource: namespace }
+        name:
+          matches: "celery_queue_length"
+          as:      "celery_total_queue_depth"
+        metricsQuery: |
+          sum(celery_queue_length{namespace="pqss",
+              queue=~"discovery|scanning|ai"}) by (namespace)

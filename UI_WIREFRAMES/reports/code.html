@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Security Reports Dashboard</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@400,FILL@0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#1773cf",
+                        "background-light": "#f6f7f8",
+                        "background-dark": "#111921",
+                    },
+                    fontFamily: {
+                        "display": ["Inter"]
+                    },
+                    borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style>
+        .swing-panel {
+            box-shadow: inset 1px 1px 0px rgba(255,255,255,0.05), 1px 1px 0px rgba(0,0,0,0.2);
+        }
+        .swing-inset {
+            box-shadow: inset 1px 1px 2px rgba(0,0,0,0.3);
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-slate-100 antialiased min-h-screen">
+<div class="flex h-screen flex-col">
+<!-- Top Navigation Bar -->
+<header class="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 bg-background-light dark:bg-slate-900 px-6 py-3 shrink-0">
+<div class="flex items-center gap-4">
+<div class="bg-primary p-1.5 rounded text-white">
+<span class="material-symbols-outlined block">security</span>
+</div>
+<h2 class="text-lg font-bold tracking-tight">Security Suite <span class="text-xs font-normal opacity-60 ml-2">v4.2.0</span></h2>
+</div>
+<div class="flex items-center gap-4">
+<div class="flex gap-2">
+<button class="flex items-center justify-center rounded bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 h-9 w-9">
+<span class="material-symbols-outlined text-xl">notifications</span>
+</button>
+<button class="flex items-center justify-center rounded bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 h-9 w-9">
+<span class="material-symbols-outlined text-xl">settings</span>
+</button>
+</div>
+<div class="h-8 w-8 rounded-full bg-primary/20 border border-primary/40 overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="User avatar placeholder profile picture" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAd5L2pzwUkmICFPvYEzXgbdGp4tgi599NybmGrblcevBUGaxK9gUKRNN08A-8_SIAwEWS7DE7jk0YBTXOb4ggeBVz92O01Qz6Dh3Mfr5W2plVhBAw9xDjl9tDUmtHpw2-UXBwt1GlT6HaRbJey1cKCeEG8rcdOMEgqbjWY2a-tKo5dkXseligIw9JIGD4WEQ3hdDj2oraMgnBH1gU0RrRlt0wskevuXPQnMBd0XF8fRJBv6PTTfrIj62yJ96oxzrMkx6HgN9hRSIw"/>
+</div>
+</div>
+</header>
+<div class="flex flex-1 overflow-hidden">
+<!-- Left Sidebar -->
+<aside class="w-64 border-r border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-background-dark flex flex-col shrink-0">
+<nav class="flex-1 p-4 space-y-1">
+<div class="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2 px-3">Main Navigation</div>
+<a class="flex items-center gap-3 px-3 py-2 rounded text-slate-600 dark:text-slate-400 hover:bg-primary/10 hover:text-primary transition-colors" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="text-sm font-medium">Dashboard</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded text-slate-600 dark:text-slate-400 hover:bg-primary/10 hover:text-primary transition-colors" href="#">
+<span class="material-symbols-outlined">inventory_2</span>
+<span class="text-sm font-medium">Assets</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded text-slate-600 dark:text-slate-400 hover:bg-primary/10 hover:text-primary transition-colors" href="#">
+<span class="material-symbols-outlined">troubleshoot</span>
+<span class="text-sm font-medium">Scans</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded bg-primary text-white" href="#">
+<span class="material-symbols-outlined">description</span>
+<span class="text-sm font-medium">Reports</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded text-slate-600 dark:text-slate-400 hover:bg-primary/10 hover:text-primary transition-colors" href="#">
+<span class="material-symbols-outlined">verified_user</span>
+<span class="text-sm font-medium">Compliance</span>
+</a>
+<div class="pt-6">
+<div class="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2 px-3">Quick Actions</div>
+<button class="w-full text-left flex items-center gap-3 px-3 py-2 text-sm text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-800 rounded">
+<span class="material-symbols-outlined text-sm">add_circle</span>
+                            New Scan
+                        </button>
+<button class="w-full text-left flex items-center gap-3 px-3 py-2 text-sm text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-800 rounded">
+<span class="material-symbols-outlined text-sm">upload</span>
+                            Import Assets
+                        </button>
+</div>
+</nav>
+<div class="p-4 border-t border-slate-200 dark:border-slate-800">
+<div class="bg-primary/5 dark:bg-primary/10 p-3 rounded border border-primary/20">
+<p class="text-xs font-bold text-primary mb-1">System Status</p>
+<div class="flex items-center gap-2">
+<div class="h-2 w-2 rounded-full bg-emerald-500"></div>
+<span class="text-[11px] opacity-70">All systems operational</span>
+</div>
+</div>
+</div>
+</aside>
+<!-- Main Content Area -->
+<main class="flex-1 overflow-y-auto bg-slate-100 dark:bg-background-dark p-6">
+<div class="max-w-6xl mx-auto flex flex-col gap-6">
+<div class="flex items-end justify-between">
+<div>
+<h1 class="text-2xl font-bold">Generate Reports</h1>
+<p class="text-slate-500 dark:text-slate-400 text-sm">Configure parameters and export system documentation</p>
+</div>
+<div class="flex gap-2">
+<button class="flex items-center gap-2 px-4 py-2 rounded bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">
+<span class="material-symbols-outlined text-base">history</span>
+                                History
+                            </button>
+<button class="flex items-center gap-2 px-4 py-2 rounded bg-primary text-white text-sm font-bold shadow-lg shadow-primary/20 hover:bg-primary/90">
+<span class="material-symbols-outlined text-base">play_arrow</span>
+                                Run Batch
+                            </button>
+</div>
+</div>
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+<!-- Configuration Panel -->
+<div class="lg:col-span-5 flex flex-col gap-6">
+<div class="bg-white dark:bg-slate-900 p-5 rounded-lg border border-slate-200 dark:border-slate-800 swing-panel">
+<h3 class="text-sm font-bold mb-4 flex items-center gap-2 uppercase tracking-wide opacity-80">
+<span class="material-symbols-outlined text-primary text-lg">tune</span>
+                                    Report Parameters
+                                </h3>
+<div class="space-y-4">
+<!-- Report Types -->
+<div>
+<label class="text-xs font-bold text-slate-500 mb-2 block">REPORT TYPE</label>
+<div class="grid grid-cols-1 gap-2">
+<label class="flex items-center gap-3 p-3 rounded border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 cursor-pointer hover:border-primary/50 transition-colors">
+<input checked="" class="text-primary focus:ring-primary h-4 w-4" name="report_type" type="radio"/>
+<div class="flex-1">
+<p class="text-sm font-bold">Asset Summary</p>
+<p class="text-[11px] opacity-60">Inventory and lifecycle overview</p>
+</div>
+</label>
+<label class="flex items-center gap-3 p-3 rounded border border-slate-200 dark:border-slate-800 hover:border-primary/50 cursor-pointer transition-colors">
+<input class="text-primary focus:ring-primary h-4 w-4" name="report_type" type="radio"/>
+<div class="flex-1">
+<p class="text-sm font-bold">Scan Results</p>
+<p class="text-[11px] opacity-60">Technical vulnerability findings</p>
+</div>
+</label>
+<label class="flex items-center gap-3 p-3 rounded border border-slate-200 dark:border-slate-800 hover:border-primary/50 cursor-pointer transition-colors">
+<input class="text-primary focus:ring-primary h-4 w-4" name="report_type" type="radio"/>
+<div class="flex-1">
+<p class="text-sm font-bold">CBOM</p>
+<p class="text-[11px] opacity-60">Component Bill of Materials (SBOM-compliant)</p>
+</div>
+</label>
+<label class="flex items-center gap-3 p-3 rounded border border-slate-200 dark:border-slate-800 hover:border-primary/50 cursor-pointer transition-colors">
+<input class="text-primary focus:ring-primary h-4 w-4" name="report_type" type="radio"/>
+<div class="flex-1">
+<p class="text-sm font-bold">Risk Assessment</p>
+<p class="text-[11px] opacity-60">Prioritized threats and scoring</p>
+</div>
+</label>
+<label class="flex items-center gap-3 p-3 rounded border border-slate-200 dark:border-slate-800 hover:border-primary/50 cursor-pointer transition-colors">
+<input class="text-primary focus:ring-primary h-4 w-4" name="report_type" type="radio"/>
+<div class="flex-1">
+<p class="text-sm font-bold">PQC Status</p>
+<p class="text-[11px] opacity-60">Post-Quantum Cryptography readiness</p>
+</div>
+</label>
+</div>
+</div>
+<!-- Date Selector -->
+<div>
+<label class="text-xs font-bold text-slate-500 mb-2 block uppercase">Time Range</label>
+<div class="relative">
+<select class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded p-2.5 text-sm focus:ring-primary focus:border-primary">
+<option>Last 24 Hours</option>
+<option selected="">Last 7 Days</option>
+<option>Last 30 Days</option>
+<option>Custom Range...</option>
+</select>
+</div>
+</div>
+<!-- Asset Filter -->
+<div>
+<label class="text-xs font-bold text-slate-500 mb-2 block uppercase">Asset Filter</label>
+<div class="relative">
+<input class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded p-2.5 text-sm focus:ring-primary focus:border-primary" placeholder="Tag: production, Region: us-east-1" type="text"/>
+<span class="material-symbols-outlined absolute right-3 top-2.5 text-slate-400">filter_alt</span>
+</div>
+</div>
+<!-- Action Button -->
+<button class="w-full bg-primary hover:bg-primary/90 text-white font-bold py-3 rounded mt-2 transition-all flex items-center justify-center gap-2">
+<span class="material-symbols-outlined">refresh</span>
+                                        Generate Preview
+                                    </button>
+</div>
+</div>
+</div>
+<!-- Preview & Export Panel -->
+<div class="lg:col-span-7 flex flex-col gap-4">
+<!-- Toolbar -->
+<div class="bg-white dark:bg-slate-900 p-3 rounded-lg border border-slate-200 dark:border-slate-800 flex items-center justify-between swing-panel">
+<div class="flex items-center gap-4">
+<h3 class="text-sm font-bold px-2">PREVIEW</h3>
+<div class="h-4 w-px bg-slate-200 dark:bg-slate-700"></div>
+<div class="flex items-center gap-1">
+<button class="p-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded">
+<span class="material-symbols-outlined text-lg">zoom_out</span>
+</button>
+<span class="text-xs font-medium px-2">100%</span>
+<button class="p-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded">
+<span class="material-symbols-outlined text-lg">zoom_in</span>
+</button>
+</div>
+</div>
+<div class="flex items-center gap-2">
+<span class="text-[10px] font-bold opacity-40 mr-2 uppercase">Export as</span>
+<button class="flex items-center gap-1.5 px-3 py-1.5 rounded bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/20 text-xs font-bold hover:bg-red-500/20">
+<span class="material-symbols-outlined text-sm">picture_as_pdf</span>
+                                        PDF
+                                    </button>
+<button class="flex items-center gap-1.5 px-3 py-1.5 rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 text-xs font-bold hover:bg-emerald-500/20">
+<span class="material-symbols-outlined text-sm">csv</span>
+                                        CSV
+                                    </button>
+<button class="flex items-center gap-1.5 px-3 py-1.5 rounded bg-slate-500/10 text-slate-600 dark:text-slate-400 border border-slate-500/20 text-xs font-bold hover:bg-slate-500/20">
+<span class="material-symbols-outlined text-sm">article</span>
+                                        TXT
+                                    </button>
+</div>
+</div>
+<!-- Preview Surface -->
+<div class="flex-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg overflow-hidden swing-inset min-h-[500px] flex flex-col">
+<div class="p-8 space-y-8 flex-1 overflow-y-auto">
+<div class="flex justify-between items-start border-b border-slate-100 dark:border-slate-800 pb-6">
+<div>
+<h2 class="text-xl font-bold uppercase tracking-tighter">Asset Summary Report</h2>
+<p class="text-xs text-slate-500 mt-1">Generated on May 24, 2024 at 14:32:01 UTC</p>
+</div>
+<div class="text-right">
+<div class="text-primary font-bold text-sm">SEC-2024-0524-A</div>
+<div class="text-[10px] uppercase font-bold opacity-40">Classification: Internal</div>
+</div>
+</div>
+<div class="grid grid-cols-3 gap-6">
+<div class="p-4 rounded border border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/30">
+<p class="text-[10px] font-bold text-slate-500 uppercase">Total Assets</p>
+<p class="text-2xl font-bold">1,422</p>
+<p class="text-[10px] text-emerald-500 mt-1">+12 since last week</p>
+</div>
+<div class="p-4 rounded border border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/30">
+<p class="text-[10px] font-bold text-slate-500 uppercase">Risk Level</p>
+<p class="text-2xl font-bold text-amber-500">Medium</p>
+<p class="text-[10px] text-slate-500 mt-1">CVSS Average: 4.8</p>
+</div>
+<div class="p-4 rounded border border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/30">
+<p class="text-[10px] font-bold text-slate-500 uppercase">Scanned</p>
+<p class="text-2xl font-bold">98.2%</p>
+<p class="text-[10px] text-slate-500 mt-1">24 assets pending</p>
+</div>
+</div>
+<div>
+<h4 class="text-xs font-bold mb-4 uppercase text-slate-500 tracking-wide">Infrastructure Breakdown</h4>
+<div class="space-y-3">
+<div class="flex justify-between items-center text-xs">
+<span>Cloud Infrastructure (AWS/Azure)</span>
+<span class="font-bold">642</span>
+</div>
+<div class="w-full bg-slate-100 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden">
+<div class="bg-primary h-full w-[45%]"></div>
+</div>
+<div class="flex justify-between items-center text-xs">
+<span>On-Premise Servers</span>
+<span class="font-bold">218</span>
+</div>
+<div class="w-full bg-slate-100 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden">
+<div class="bg-primary h-full w-[15%]"></div>
+</div>
+<div class="flex justify-between items-center text-xs">
+<span>End-User Devices</span>
+<span class="font-bold">562</span>
+</div>
+<div class="w-full bg-slate-100 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden">
+<div class="bg-primary h-full w-[40%]"></div>
+</div>
+</div>
+</div>
+<div class="flex justify-center py-4">
+<div class="w-48 h-48 rounded-full border-8 border-slate-50 dark:border-slate-800 relative flex items-center justify-center">
+<div class="absolute inset-0 rounded-full border-8 border-primary border-t-transparent -rotate-45"></div>
+<div class="text-center">
+<p class="text-xs font-bold opacity-40 uppercase">PQC Ready</p>
+<p class="text-3xl font-bold">72%</p>
+</div>
+</div>
+</div>
+</div>
+<div class="p-4 bg-slate-50 dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 flex justify-center">
+<p class="text-[10px] text-slate-400 font-medium">PAGE 1 OF 14 — CONFIDENTIAL</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+</div>
+<!-- Footer / Status Bar -->
+<footer class="bg-slate-200 dark:bg-slate-900 border-t border-slate-300 dark:border-slate-800 px-4 py-1.5 flex items-center justify-between text-[11px] font-medium shrink-0">
+<div class="flex items-center gap-6">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-sm text-emerald-500">check_circle</span>
+<span>Connected to Enterprise Node A</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-sm">database</span>
+<span>DB: 1.2GB / 5.0GB</span>
+</div>
+</div>
+<div class="flex items-center gap-4 divide-x divide-slate-300 dark:divide-slate-700">
+<span class="pl-4">Encoding: UTF-8</span>
+<span class="pl-4">Memory: 412MB</span>
+<span class="pl-4">CPU: 2%</span>
+</div>
+</footer>
+</div>
+</body></html>

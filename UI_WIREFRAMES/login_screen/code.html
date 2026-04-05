@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Quantum-Safe Asset Scanner - Login</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              colors: {
+                "primary": "#1773cf",
+                "background-light": "#f6f7f8",
+                "background-dark": "#111921",
+                "panel-dark": "#1a2632",
+                "border-accent": "#344d65",
+                "teal-accent": "#2dd4bf"
+              },
+              fontFamily: {
+                "display": ["Inter", "sans-serif"]
+              },
+              borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+            },
+          },
+        }
+    </script>
+<style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        /* Custom scrollbar to match the dark theme */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #111921;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #344d65;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark font-display flex items-center justify-center min-h-screen">
+<div class="w-full max-w-md p-6">
+<!-- Logo and Header -->
+<div class="flex flex-col items-center mb-8">
+<div class="w-16 h-16 bg-primary/20 rounded-xl flex items-center justify-center mb-4 border border-primary/30 shadow-lg shadow-primary/10">
+<span class="material-symbols-outlined text-primary text-4xl">shield_lock</span>
+</div>
+<h1 class="text-slate-900 dark:text-slate-100 text-2xl font-bold tracking-tight text-center">
+                Quantum-Safe Asset Scanner
+            </h1>
+<p class="text-slate-500 dark:text-slate-400 text-sm mt-1 font-medium">
+                Secure Asset Risk Assessment Simulator
+            </p>
+</div>
+<!-- Login Card -->
+<div class="bg-white dark:bg-panel-dark border border-slate-200 dark:border-border-accent rounded-xl shadow-2xl overflow-hidden">
+<!-- Card Header (Desktop App Style) -->
+<div class="bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-border-accent px-6 py-3 flex items-center justify-between">
+<span class="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">System Authentication</span>
+<div class="flex gap-1.5">
+<div class="w-2.5 h-2.5 rounded-full bg-slate-300 dark:bg-slate-600"></div>
+<div class="w-2.5 h-2.5 rounded-full bg-slate-300 dark:bg-slate-600"></div>
+</div>
+</div>
+<form class="p-8 space-y-5">
+<!-- Username -->
+<div>
+<label class="block text-slate-700 dark:text-slate-300 text-sm font-semibold mb-1.5" for="username">
+                        Username
+                    </label>
+<div class="relative">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-lg">person</span>
+<input class="w-full pl-10 pr-4 py-2.5 bg-slate-50 dark:bg-background-dark border border-slate-300 dark:border-border-accent rounded-lg text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-primary/50 focus:border-primary outline-none transition-all placeholder:text-slate-400 dark:placeholder:text-slate-600" id="username" placeholder="Enter system identifier" type="text"/>
+</div>
+</div>
+<!-- Password -->
+<div>
+<div class="flex justify-between items-center mb-1.5">
+<label class="block text-slate-700 dark:text-slate-300 text-sm font-semibold" for="password">
+                            Encryption Key
+                        </label>
+<a class="text-xs text-primary hover:underline font-medium" href="#">Reset Access</a>
+</div>
+<div class="relative">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-lg">vpn_key</span>
+<input class="w-full pl-10 pr-4 py-2.5 bg-slate-50 dark:bg-background-dark border border-slate-300 dark:border-border-accent rounded-lg text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-primary/50 focus:border-primary outline-none transition-all placeholder:text-slate-400 dark:placeholder:text-slate-600" id="password" placeholder="••••••••••••" type="password"/>
+</div>
+</div>
+<!-- Role Selection -->
+<div>
+<label class="block text-slate-700 dark:text-slate-300 text-sm font-semibold mb-1.5" for="role">
+                        Access Level
+                    </label>
+<div class="relative">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-lg">badge</span>
+<select class="w-full pl-10 pr-10 py-2.5 bg-slate-50 dark:bg-background-dark border border-slate-300 dark:border-border-accent rounded-lg text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-primary/50 focus:border-primary outline-none appearance-none transition-all cursor-pointer" id="role">
+<option disabled="" selected="" value="">Select Authorization Role</option>
+<option value="admin">Administrator (Full Access)</option>
+<option value="analyst">Security Analyst (Read/Scan Only)</option>
+</select>
+<span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">expand_more</span>
+</div>
+</div>
+<!-- Login Button -->
+<div class="pt-2">
+<button class="w-full bg-primary hover:bg-primary/90 text-white font-bold py-3 px-4 rounded-lg shadow-lg shadow-primary/20 flex items-center justify-center gap-2 transition-transform active:scale-[0.98]" type="submit">
+<span class="material-symbols-outlined text-lg">login</span>
+                        Initialize Secure Session
+                    </button>
+</div>
+</form>
+<!-- Card Footer -->
+<div class="bg-slate-50 dark:bg-slate-800/30 px-8 py-4 border-t border-slate-200 dark:border-border-accent text-center">
+<p class="text-xs text-slate-500 dark:text-slate-500 flex items-center justify-center gap-1">
+<span class="material-symbols-outlined text-xs text-teal-accent">verified_user</span>
+                    FIPS 140-3 Compliance Mode Active
+                </p>
+</div>
+</div>
+<!-- System Footer Info -->
+<div class="mt-8 flex flex-col items-center gap-4">
+<div class="flex gap-6">
+<div class="flex flex-col items-center">
+<span class="text-[10px] uppercase font-bold text-slate-400 tracking-widest">Environment</span>
+<span class="text-xs font-mono text-teal-accent">PROD-X7_BETA</span>
+</div>
+<div class="w-px h-8 bg-slate-300 dark:bg-border-accent"></div>
+<div class="flex flex-col items-center">
+<span class="text-[10px] uppercase font-bold text-slate-400 tracking-widest">Uptime</span>
+<span class="text-xs font-mono text-slate-900 dark:text-slate-300">99.998%</span>
+</div>
+<div class="w-px h-8 bg-slate-300 dark:bg-border-accent"></div>
+<div class="flex flex-col items-center">
+<span class="text-[10px] uppercase font-bold text-slate-400 tracking-widest">Protocol</span>
+<span class="text-xs font-mono text-slate-900 dark:text-slate-300">QS-AES-512</span>
+</div>
+</div>
+<p class="text-[10px] text-slate-400 text-center leading-relaxed max-w-[300px]">
+                Unauthorized access to this terminal is strictly prohibited and monitored by automated counter-measures.
+            </p>
+</div>
+</div>
+</body></html>

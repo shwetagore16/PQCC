@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Network Security Suite - Run Scan</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#1773cf",
+                        "background-light": "#f6f7f8",
+                        "background-dark": "#111921",
+                        "panel-dark": "#1a2632",
+                        "border-dark": "#344d65",
+                    },
+                    fontFamily: {
+                        "display": ["Inter"]
+                    },
+                    borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style>
+        body { font-family: 'Inter', sans-serif; }
+        .swing-panel {
+            border: 1px solid #344d65;
+            box-shadow: inset 1px 1px 0px rgba(255,255,255,0.05);
+        }
+        .swing-inset {
+            background-color: #0d141b;
+            box-shadow: inset 2px 2px 4px rgba(0,0,0,0.3);
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100 font-display">
+<div class="flex h-screen overflow-hidden">
+<!-- Sidebar Navigation -->
+<aside class="w-64 flex-shrink-0 bg-background-light dark:bg-background-dark border-r border-slate-200 dark:border-border-dark flex flex-col">
+<div class="p-6">
+<div class="flex items-center gap-3 mb-8">
+<span class="material-symbols-outlined text-primary text-3xl">shield_person</span>
+<div>
+<h1 class="text-slate-900 dark:text-slate-100 text-sm font-bold leading-tight">Security Scanner</h1>
+<p class="text-slate-500 dark:text-slate-400 text-xs">v2.4.0 (Alpha)</p>
+</div>
+</div>
+<nav class="space-y-1">
+<a class="flex items-center gap-3 px-3 py-2 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-primary/10 rounded-lg transition-colors" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="text-sm font-medium">Dashboard</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 bg-primary text-white rounded-lg" href="#">
+<span class="material-symbols-outlined">play_arrow</span>
+<span class="text-sm font-medium">Run Scan</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-primary/10 rounded-lg transition-colors" href="#">
+<span class="material-symbols-outlined">history</span>
+<span class="text-sm font-medium">Scan History</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-primary/10 rounded-lg transition-colors" href="#">
+<span class="material-symbols-outlined">database</span>
+<span class="text-sm font-medium">Assets</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-primary/10 rounded-lg transition-colors" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span class="text-sm font-medium">Settings</span>
+</a>
+</nav>
+</div>
+<div class="mt-auto p-4 border-t border-slate-200 dark:border-border-dark">
+<div class="bg-primary/10 p-3 rounded-lg border border-primary/20">
+<p class="text-[10px] uppercase tracking-wider text-primary font-bold mb-1">System Status</p>
+<div class="flex items-center gap-2">
+<span class="size-2 rounded-full bg-emerald-500"></span>
+<span class="text-xs text-slate-600 dark:text-slate-300">Engine Ready</span>
+</div>
+</div>
+</div>
+</aside>
+<!-- Main Content Area -->
+<main class="flex-1 flex flex-col overflow-hidden bg-background-light dark:bg-background-dark">
+<!-- Header/Top Bar -->
+<header class="h-16 border-b border-slate-200 dark:border-border-dark flex items-center justify-between px-8 bg-white dark:bg-background-dark/50">
+<div class="flex items-center gap-4">
+<span class="material-symbols-outlined text-slate-400">lan</span>
+<h2 class="text-slate-900 dark:text-slate-100 font-bold tracking-tight">Network Security Suite</h2>
+</div>
+<div class="flex items-center gap-4">
+<div class="relative group">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-lg">search</span>
+<input class="bg-slate-100 dark:bg-panel-dark border-none rounded-lg pl-10 pr-4 py-1.5 text-sm w-64 focus:ring-1 focus:ring-primary" placeholder="Search logs..." type="text"/>
+</div>
+<button class="p-2 text-slate-500 hover:bg-slate-100 dark:hover:bg-panel-dark rounded-lg">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<div class="size-8 rounded-full bg-primary flex items-center justify-center text-white font-bold text-xs">JD</div>
+</div>
+</header>
+<!-- Scrollable Page Content -->
+<div class="flex-1 overflow-y-auto p-8">
+<div class="max-w-5xl mx-auto space-y-6">
+<div>
+<h3 class="text-2xl font-bold text-slate-900 dark:text-slate-100 mb-1">Initiate Security Assessment</h3>
+<p class="text-slate-500 dark:text-slate-400 text-sm">Configure and execute automated vulnerability scanning on designated network assets.</p>
+</div>
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+<!-- Left Column: Asset Selection & Config -->
+<div class="lg:col-span-2 space-y-6">
+<!-- Asset Selection Card -->
+<div class="bg-white dark:bg-panel-dark swing-panel rounded-lg p-6">
+<label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-3">Asset Selection</label>
+<select class="w-full bg-slate-50 dark:bg-background-dark border border-slate-200 dark:border-border-dark rounded-lg p-3 text-slate-900 dark:text-slate-100 focus:ring-primary focus:border-primary">
+<option>Production Edge Server - 192.168.1.120</option>
+<option>Internal DB Cluster - 10.0.4.15</option>
+<option>Legacy Web Portal - 172.16.0.44</option>
+</select>
+<div class="mt-6 flex flex-col md:flex-row gap-4 p-4 bg-slate-100 dark:bg-background-dark/50 rounded-lg border border-slate-200 dark:border-border-dark">
+<div class="flex-1 space-y-2">
+<p class="text-xs text-slate-500 font-medium">Summary Details</p>
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-sm">dns</span>
+<span class="text-sm font-bold text-slate-800 dark:text-slate-200">Asset: Web Server Alpha</span>
+</div>
+<div class="flex items-center gap-4 text-xs text-slate-500">
+<span class="flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">public</span> 10.0.0.45</span>
+<span class="flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">terminal</span> Ubuntu 22.04 LTS</span>
+</div>
+</div>
+<div class="md:w-32 h-20 bg-slate-200 dark:bg-panel-dark rounded border border-slate-300 dark:border-border-dark overflow-hidden">
+<div class="w-full h-full bg-gradient-to-br from-slate-700 to-slate-900 flex items-center justify-center" data-alt="Abstract server room visual representation">
+<span class="material-symbols-outlined text-white/20 text-4xl">memory</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Config Panel -->
+<div class="bg-white dark:bg-panel-dark swing-panel rounded-lg p-6">
+<label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-4">Scan Configuration</label>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+<label class="flex items-center gap-3 p-3 rounded border border-slate-200 dark:border-border-dark hover:bg-slate-50 dark:hover:bg-background-dark/30 cursor-pointer">
+<input checked="" class="rounded border-slate-300 dark:border-border-dark bg-transparent text-primary focus:ring-primary" type="checkbox"/>
+<span class="text-sm font-medium">TLS Vulnerability Scan</span>
+</label>
+<label class="flex items-center gap-3 p-3 rounded border border-slate-200 dark:border-border-dark hover:bg-slate-50 dark:hover:bg-background-dark/30 cursor-pointer">
+<input checked="" class="rounded border-slate-300 dark:border-border-dark bg-transparent text-primary focus:ring-primary" type="checkbox"/>
+<span class="text-sm font-medium">Certificate Integrity Scan</span>
+</label>
+<label class="flex items-center gap-3 p-3 rounded border border-slate-200 dark:border-border-dark hover:bg-slate-50 dark:hover:bg-background-dark/30 cursor-pointer">
+<input checked="" class="rounded border-slate-300 dark:border-border-dark bg-transparent text-primary focus:ring-primary" type="checkbox"/>
+<span class="text-sm font-medium">Cipher Suite Analysis</span>
+</label>
+<label class="flex items-center gap-3 p-3 rounded border border-slate-200 dark:border-border-dark hover:bg-slate-50 dark:hover:bg-background-dark/30 cursor-pointer">
+<input class="rounded border-slate-300 dark:border-border-dark bg-transparent text-primary focus:ring-primary" type="checkbox"/>
+<span class="text-sm font-medium">PQC Compatibility Check</span>
+</label>
+</div>
+<div class="mt-8 flex items-center justify-between">
+<p class="text-xs text-slate-500 italic">
+<span class="material-symbols-outlined align-middle text-sm mr-1">info</span>
+                                        This project uses rule-based scan simulation.
+                                    </p>
+<button class="bg-primary hover:bg-primary/90 text-white px-8 py-3 rounded-lg font-bold flex items-center gap-2 shadow-lg shadow-primary/20 transition-all">
+<span class="material-symbols-outlined">bolt</span>
+                                        Run Scan
+                                    </button>
+</div>
+</div>
+</div>
+<!-- Right Column: Live Status & Progress -->
+<div class="lg:col-span-1 space-y-6">
+<div class="bg-white dark:bg-panel-dark swing-panel rounded-lg flex flex-col h-full">
+<div class="p-6 flex flex-col h-full">
+<label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-4">Live Scan Status</label>
+<div class="mb-6">
+<div class="flex justify-between items-end mb-2">
+<span class="text-sm font-bold text-primary">Scanning...</span>
+<span class="text-xs font-medium text-slate-400">45% Complete</span>
+</div>
+<div class="w-full h-3 bg-slate-200 dark:bg-background-dark rounded-full overflow-hidden">
+<div class="h-full bg-primary" style="width: 45%"></div>
+</div>
+</div>
+<div class="flex-1 swing-inset rounded-lg p-4 font-mono text-[11px] leading-relaxed overflow-y-auto text-emerald-500/80">
+<div class="space-y-1">
+<p>[09:22:01] Initializing scan engine v2.4.0...</p>
+<p>[09:22:02] Establishing handshake with 10.0.0.45</p>
+<p>[09:22:03] <span class="text-primary">OK</span> Connection established.</p>
+<p>[09:22:05] Starting TLS version detection...</p>
+<p>[09:22:08] Detected: TLS 1.3, TLS 1.2 supported.</p>
+<p>[09:22:12] Beginning cipher suite analysis...</p>
+<p>[09:22:15] Analyzing ECDHE-RSA-AES256-GCM-SHA384...</p>
+<p class="animate-pulse">[09:22:18] Testing certificate revocation status...</p>
+<p class="text-slate-600 dark:text-slate-500">_</p>
+</div>
+</div>
+<div class="mt-6 space-y-4">
+<div class="flex items-center justify-between p-3 bg-slate-50 dark:bg-background-dark/40 rounded border border-slate-200 dark:border-border-dark">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-amber-500 text-lg">warning</span>
+<span class="text-xs font-medium">Vulnerabilities</span>
+</div>
+<span class="text-xs font-bold">2 Detected</span>
+</div>
+<div class="flex items-center justify-between p-3 bg-slate-50 dark:bg-background-dark/40 rounded border border-slate-200 dark:border-border-dark">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-emerald-500 text-lg">check_circle</span>
+<span class="text-xs font-medium">Tests Passed</span>
+</div>
+<span class="text-xs font-bold">14 Complete</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+</div>
+</body></html>

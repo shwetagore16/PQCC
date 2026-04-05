@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>User Management System</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#1773cf",
+                        "background-light": "#f6f7f8",
+                        "background-dark": "#111921",
+                    },
+                    fontFamily: {
+                        "display": ["Inter"]
+                    },
+                    borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style>
+        /* Java Swing inspired "beveled" or "inset" feel for dark mode panels */
+        .swing-panel {
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: inset 1px 1px 0px rgba(255, 255, 255, 0.05);
+        }
+        .swing-button {
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 1px 2px rgba(0,0,0,0.3);
+        }
+        .swing-button:active {
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.5);
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-slate-100 antialiased">
+<div class="relative flex h-screen w-full flex-col overflow-hidden">
+<!-- Top Navigation Bar (Swing Style Header) -->
+<header class="flex h-14 items-center justify-between border-b border-slate-700 bg-slate-800 px-6 py-2">
+<div class="flex items-center gap-6">
+<div class="flex items-center gap-2 text-primary">
+<span class="material-symbols-outlined text-2xl">admin_panel_settings</span>
+<h2 class="text-lg font-bold leading-tight tracking-tight text-slate-100">Admin Console</h2>
+</div>
+<!-- Search Bar -->
+<div class="flex h-9 w-64 items-center rounded bg-slate-900 px-3 ring-1 ring-slate-700">
+<span class="material-symbols-outlined text-slate-400 text-sm">search</span>
+<input class="w-full bg-transparent border-none focus:ring-0 text-sm placeholder:text-slate-500 text-slate-100" placeholder="Search resources..." type="text"/>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<button class="swing-button flex h-8 w-8 items-center justify-center rounded bg-slate-700 text-slate-200 hover:bg-slate-600">
+<span class="material-symbols-outlined text-xl">notifications</span>
+</button>
+<button class="swing-button flex h-8 w-8 items-center justify-center rounded bg-slate-700 text-slate-200 hover:bg-slate-600">
+<span class="material-symbols-outlined text-xl">settings</span>
+</button>
+<div class="h-8 w-8 rounded-full bg-primary flex items-center justify-center text-xs font-bold border border-slate-600" data-alt="User avatar placeholder">JD</div>
+</div>
+</header>
+<div class="flex flex-1 overflow-hidden">
+<!-- Sidebar -->
+<aside class="flex w-64 flex-col border-r border-slate-700 bg-slate-800/50 p-4">
+<div class="mb-6 px-2">
+<h1 class="text-xs font-bold uppercase tracking-wider text-slate-500">System Menu</h1>
+</div>
+<nav class="flex flex-col gap-1">
+<a class="flex items-center gap-3 rounded px-3 py-2 text-sm font-medium text-slate-400 hover:bg-slate-700 hover:text-slate-100" href="#">
+<span class="material-symbols-outlined text-xl">dashboard</span>
+                    Dashboard
+                </a>
+<a class="flex items-center gap-3 rounded bg-primary px-3 py-2 text-sm font-medium text-white" href="#">
+<span class="material-symbols-outlined text-xl">group</span>
+                    User Management
+                </a>
+<a class="flex items-center gap-3 rounded px-3 py-2 text-sm font-medium text-slate-400 hover:bg-slate-700 hover:text-slate-100" href="#">
+<span class="material-symbols-outlined text-xl">security</span>
+                    Roles &amp; Permissions
+                </a>
+<a class="flex items-center gap-3 rounded px-3 py-2 text-sm font-medium text-slate-400 hover:bg-slate-700 hover:text-slate-100" href="#">
+<span class="material-symbols-outlined text-xl">history</span>
+                    Audit Logs
+                </a>
+<div class="my-4 border-t border-slate-700"></div>
+<a class="flex items-center gap-3 rounded px-3 py-2 text-sm font-medium text-slate-400 hover:bg-slate-700 hover:text-slate-100" href="#">
+<span class="material-symbols-outlined text-xl">database</span>
+                    Database Status
+                </a>
+</nav>
+<div class="mt-auto p-2">
+<div class="rounded bg-slate-900/50 p-3 ring-1 ring-slate-700">
+<p class="text-[10px] font-bold uppercase text-slate-500">System Version</p>
+<p class="text-xs text-slate-300">v2.4.5-stable</p>
+</div>
+</div>
+</aside>
+<!-- Main Content Area -->
+<main class="flex flex-1 flex-col overflow-y-auto bg-background-dark p-8">
+<div class="mb-6 flex items-center justify-between">
+<div>
+<h2 class="text-2xl font-bold text-slate-100">User Directory</h2>
+<p class="text-sm text-slate-400">Configure system access and manage administrative roles.</p>
+</div>
+<button class="swing-button flex items-center gap-2 rounded bg-primary px-4 py-2 text-sm font-bold text-white hover:bg-primary/90">
+<span class="material-symbols-outlined">person_add</span>
+                    Add New User
+                </button>
+</div>
+<!-- Table Container (Swing inspired JTable wrapper) -->
+<div class="swing-panel flex flex-col overflow-hidden rounded bg-slate-800">
+<div class="overflow-x-auto">
+<table class="w-full text-left text-sm border-collapse">
+<thead>
+<tr class="bg-slate-700/50 border-b border-slate-600">
+<th class="px-6 py-3 font-semibold text-slate-300">ID</th>
+<th class="px-6 py-3 font-semibold text-slate-300">Name / Email</th>
+<th class="px-6 py-3 font-semibold text-slate-300 text-center">Role</th>
+<th class="px-6 py-3 font-semibold text-slate-300 text-center">Status</th>
+<th class="px-6 py-3 font-semibold text-slate-300 text-right">Actions</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-slate-700">
+<!-- Row 1 -->
+<tr class="hover:bg-slate-700/30 transition-colors">
+<td class="px-6 py-4 font-mono text-xs text-slate-400">#USR-8821</td>
+<td class="px-6 py-4">
+<div class="flex flex-col">
+<span class="font-bold text-slate-100">Alexander Wright</span>
+<span class="text-xs text-slate-500">alex.w@enterprise.com</span>
+</div>
+</td>
+<td class="px-6 py-4 text-center">
+<span class="inline-flex items-center rounded bg-primary/20 px-2 py-1 text-xs font-medium text-primary ring-1 ring-primary/30">Administrator</span>
+</td>
+<td class="px-6 py-4 text-center">
+<span class="inline-flex items-center gap-1.5 rounded bg-emerald-500/10 px-2 py-1 text-xs font-medium text-emerald-400 ring-1 ring-emerald-500/20">
+<span class="h-1.5 w-1.5 rounded-full bg-emerald-400"></span> Active
+                                    </span>
+</td>
+<td class="px-6 py-4 text-right">
+<div class="flex justify-end gap-2">
+<button class="swing-button rounded bg-slate-700 p-1.5 text-slate-400 hover:text-slate-100">
+<span class="material-symbols-outlined text-lg">edit</span>
+</button>
+<button class="swing-button rounded bg-slate-700 p-1.5 text-slate-400 hover:text-red-400">
+<span class="material-symbols-outlined text-lg">delete</span>
+</button>
+</div>
+</td>
+</tr>
+<!-- Row 2 -->
+<tr class="hover:bg-slate-700/30 transition-colors">
+<td class="px-6 py-4 font-mono text-xs text-slate-400">#USR-8822</td>
+<td class="px-6 py-4">
+<div class="flex flex-col">
+<span class="font-bold text-slate-100">Sarah Jenkins</span>
+<span class="text-xs text-slate-500">s.jenkins@enterprise.com</span>
+</div>
+</td>
+<td class="px-6 py-4 text-center">
+<span class="inline-flex items-center rounded bg-slate-700 px-2 py-1 text-xs font-medium text-slate-300 ring-1 ring-slate-600">Operator</span>
+</td>
+<td class="px-6 py-4 text-center">
+<span class="inline-flex items-center gap-1.5 rounded bg-emerald-500/10 px-2 py-1 text-xs font-medium text-emerald-400 ring-1 ring-emerald-500/20">
+<span class="h-1.5 w-1.5 rounded-full bg-emerald-400"></span> Active
+                                    </span>
+</td>
+<td class="px-6 py-4 text-right">
+<div class="flex justify-end gap-2">
+<button class="swing-button rounded bg-slate-700 p-1.5 text-slate-400 hover:text-slate-100">
+<span class="material-symbols-outlined text-lg">edit</span>
+</button>
+<button class="swing-button rounded bg-slate-700 p-1.5 text-slate-400 hover:text-red-400">
+<span class="material-symbols-outlined text-lg">delete</span>
+</button>
+</div>
+</td>
+</tr>
+<!-- Row 3 -->
+<tr class="hover:bg-slate-700/30 transition-colors">
+<td class="px-6 py-4 font-mono text-xs text-slate-400">#USR-8825</td>
+<td class="px-6 py-4">
+<div class="flex flex-col">
+<span class="font-bold text-slate-100">Marcus Thorne</span>
+<span class="text-xs text-slate-500">m.thorne@enterprise.com</span>
+</div>
+</td>
+<td class="px-6 py-4 text-center">
+<span class="inline-flex items-center rounded bg-slate-700 px-2 py-1 text-xs font-medium text-slate-300 ring-1 ring-slate-600">Viewer</span>
+</td>
+<td class="px-6 py-4 text-center">
+<span class="inline-flex items-center gap-1.5 rounded bg-amber-500/10 px-2 py-1 text-xs font-medium text-amber-400 ring-1 ring-amber-500/20">
+<span class="h-1.5 w-1.5 rounded-full bg-amber-400"></span> Pending
+                                    </span>
+</td>
+<td class="px-6 py-4 text-right">
+<div class="flex justify-end gap-2">
+<button class="swing-button rounded bg-slate-700 p-1.5 text-slate-400 hover:text-slate-100">
+<span class="material-symbols-outlined text-lg">edit</span>
+</button>
+<button class="swing-button rounded bg-slate-700 p-1.5 text-slate-400 hover:text-red-400">
+<span class="material-symbols-outlined text-lg">delete</span>
+</button>
+</div>
+</td>
+</tr>
+<!-- Row 4 -->
+<tr class="hover:bg-slate-700/30 transition-colors">
+<td class="px-6 py-4 font-mono text-xs text-slate-400">#USR-8829</td>
+<td class="px-6 py-4">
+<div class="flex flex-col">
+<span class="font-bold text-slate-100">Lena Petrova</span>
+<span class="text-xs text-slate-500">l.petrova@enterprise.com</span>
+</div>
+</td>
+<td class="px-6 py-4 text-center">
+<span class="inline-flex items-center rounded bg-slate-700 px-2 py-1 text-xs font-medium text-slate-300 ring-1 ring-slate-600">Operator</span>
+</td>
+<td class="px-6 py-4 text-center">
+<span class="inline-flex items-center gap-1.5 rounded bg-slate-700 px-2 py-1 text-xs font-medium text-slate-500 ring-1 ring-slate-600">
+<span class="h-1.5 w-1.5 rounded-full bg-slate-600"></span> Suspended
+                                    </span>
+</td>
+<td class="px-6 py-4 text-right">
+<div class="flex justify-end gap-2">
+<button class="swing-button rounded bg-slate-700 p-1.5 text-slate-400 hover:text-slate-100">
+<span class="material-symbols-outlined text-lg">edit</span>
+</button>
+<button class="swing-button rounded bg-slate-700 p-1.5 text-slate-400 hover:text-red-400">
+<span class="material-symbols-outlined text-lg">delete</span>
+</button>
+</div>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<!-- Pagination / Status Footer -->
+<div class="flex items-center justify-between border-t border-slate-700 bg-slate-700/30 px-6 py-3">
+<span class="text-xs text-slate-400">Showing 1 to 4 of 24 entries</span>
+<div class="flex gap-1">
+<button class="swing-button flex h-8 w-8 items-center justify-center rounded bg-slate-800 text-slate-400 hover:bg-slate-700 disabled:opacity-50" disabled="">
+<span class="material-symbols-outlined">chevron_left</span>
+</button>
+<button class="swing-button flex h-8 w-8 items-center justify-center rounded bg-primary text-white font-bold text-xs">1</button>
+<button class="swing-button flex h-8 w-8 items-center justify-center rounded bg-slate-800 text-slate-300 font-bold text-xs hover:bg-slate-700">2</button>
+<button class="swing-button flex h-8 w-8 items-center justify-center rounded bg-slate-800 text-slate-300 font-bold text-xs hover:bg-slate-700">3</button>
+<button class="swing-button flex h-8 w-8 items-center justify-center rounded bg-slate-800 text-slate-400 hover:bg-slate-700">
+<span class="material-symbols-outlined">chevron_right</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Dashboard Widgets (Optional Context) -->
+<div class="mt-8 grid grid-cols-1 gap-6 md:grid-cols-3">
+<div class="swing-panel rounded bg-slate-800 p-4">
+<div class="flex items-center justify-between mb-2">
+<h3 class="text-xs font-bold uppercase text-slate-500">Active Sessions</h3>
+<span class="material-symbols-outlined text-primary">sensors</span>
+</div>
+<p class="text-2xl font-bold text-slate-100">12</p>
+<p class="text-[10px] text-emerald-400">+2 from last hour</p>
+</div>
+<div class="swing-panel rounded bg-slate-800 p-4">
+<div class="flex items-center justify-between mb-2">
+<h3 class="text-xs font-bold uppercase text-slate-500">Security Alerts</h3>
+<span class="material-symbols-outlined text-amber-500">warning</span>
+</div>
+<p class="text-2xl font-bold text-slate-100">0</p>
+<p class="text-[10px] text-slate-500">All systems nominal</p>
+</div>
+<div class="swing-panel rounded bg-slate-800 p-4">
+<div class="flex items-center justify-between mb-2">
+<h3 class="text-xs font-bold uppercase text-slate-500">License Utilization</h3>
+<span class="material-symbols-outlined text-slate-400">fact_check</span>
+</div>
+<p class="text-2xl font-bold text-slate-100">45%</p>
+<div class="mt-2 h-1.5 w-full rounded-full bg-slate-700 overflow-hidden">
+<div class="h-full bg-primary" style="width: 45%"></div>
+</div>
+</div>
+</div>
+</main>
+</div>
+</div>
+</body></html>

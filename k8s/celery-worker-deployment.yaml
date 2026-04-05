@@ -1,0 +1,221 @@
+# ═══════════════════════════════════════════════════════════════════════════════
+# k8s/celery-worker-deployment.yaml
+# Kubernetes Deployment for PQSS Celery Workers
+# ═══════════════════════════════════════════════════════════════════════════════
+#
+# Design:
+#   • Workers pull from 3 queues: discovery, scanning, ai
+#   • Init-container waits for Redis readiness before workers start
+#   • Liveness probe restarts stuck workers (no heartbeat in 60s)
+#   • Resource requests/limits tuned for ML inference (2 CPU, 2Gi RAM)
+#   • Pod anti-affinity spreads replicas across nodes for HA
+#   • SecurityContext: no-root, read-only rootFS, drop all Linux capabilities
+# ═══════════════════════════════════════════════════════════════════════════════
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pqss-celery-worker
+  namespace: pqss
+  labels:
+    app:       pqss
+    component: celery-worker
+    tier:      backend
+  annotations:
+    # Used by Argo Rollouts / CI/CD for canary tracking
+    deployment.kubernetes.io/revision: "1"
+    pqss.io/phase: "scan-ml-worker"
+spec:
+  replicas: 2              # Initial replica count — HPA will override this
+  selector:
+    matchLabels:
+      app:       pqss
+      component: celery-worker
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge:       1
+      maxUnavailable: 0    # Zero-downtime rolling update
+  template:
+    metadata:
+      labels:
+        app:       pqss
+        component: celery-worker
+        version:   "v1"
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port:   "9691"   # celery-exporter metrics port
+        prometheus.io/path:   "/metrics"
+        # Force pod restart on ConfigMap change (checksum of cm)
+        configmap/checksum: "{{ .Values.configmap_checksum | default 'na' }}"
+    spec:
+
+      # ── Service account with minimal RBAC ────────────────────────────────
+      serviceAccountName: pqss-worker
+
+      # ── Spread across availability zones ─────────────────────────────────
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchLabels:
+                    component: celery-worker
+                topologyKey: kubernetes.io/hostname
+
+      # ── Graceful shutdown: wait for running tasks to complete ─────────────
+      terminationGracePeriodSeconds: 120
+
+      # ── Init: wait for Redis before starting workers ─────────────────────
+      initContainers:
+        - name: wait-for-redis
+          image: redis:7-alpine
+          command:
+            - sh
+            - -c
+            - |
+              echo "Waiting for Redis..."
+              until redis-cli -h "$REDIS_HOST" -p "$REDIS_PORT" -a "$REDIS_PASSWORD" ping | grep -q PONG; do
+                echo "Redis not ready — retrying in 3s"
+                sleep 3
+              done
+              echo "Redis is ready."
+          env:
+            - name: REDIS_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: pqss-config
+                  key:  REDIS_HOST
+            - name: REDIS_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: pqss-config
+                  key:  REDIS_PORT
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: pqss-secrets
+                  key:  REDIS_PASSWORD
+          resources:
+            requests: { cpu: "50m", memory: "32Mi" }
+            limits:   { cpu: "100m", memory: "64Mi" }
+
+      containers:
+        - name: celery-worker
+          image: pqss/fastapi-backend:latest
+          imagePullPolicy: Always
+          command:
+            - celery
+            - -A
+            - workers.celery_app
+            - worker
+            - --loglevel=info
+            - --concurrency=4
+            - --queues=discovery,scanning,ai
+            - --max-tasks-per-child=100
+            - --without-gossip
+            - --without-mingle
+
+          # ── Environment variables from ConfigMap + Secrets ────────────────
+          envFrom:
+            - configMapRef:
+                name: pqss-config
+            - secretRef:
+                name: pqss-secrets
+
+          # ── Override specific values ──────────────────────────────────────
+          env:
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: CELERY_WORKER_NAME
+              value: "worker@$(POD_NAME)"
+
+          # ── Resource budget (for ML inference: 2 CPU + 2Gi) ──────────────
+          resources:
+            requests:
+              cpu:    "500m"
+              memory: "512Mi"
+            limits:
+              cpu:    "2000m"
+              memory: "2Gi"
+
+          # ── Liveness: Celery ping (worker stuck → restart) ────────────────
+          livenessProbe:
+            exec:
+              command:
+                - sh
+                - -c
+                - celery -A workers.celery_app inspect ping -d "worker@$POD_NAME" --timeout 10
+            initialDelaySeconds: 30
+            periodSeconds:       60
+            timeoutSeconds:      15
+            failureThreshold:    3
+
+          # ── Readiness: worker registered in Redis ─────────────────────────
+          readinessProbe:
+            exec:
+              command:
+                - sh
+                - -c
+                - celery -A workers.celery_app inspect active_queues --timeout 5
+            initialDelaySeconds: 20
+            periodSeconds:       30
+            timeoutSeconds:      10
+            failureThreshold:    5
+
+          # ── Security hardening ────────────────────────────────────────────
+          securityContext:
+            runAsNonRoot:             true
+            runAsUser:                1000
+            runAsGroup:               1000
+            readOnlyRootFilesystem:   true
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+
+          # ── Writable tmp for Celery task artefacts ────────────────────────
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+            - name: app-cache
+              mountPath: /app/.cache
+
+        # ── Celery metrics exporter sidecar ───────────────────────────────
+        - name: celery-exporter
+          image: danihodovic/celery-exporter:0.10
+          args:
+            - --broker-url=redis://:$(REDIS_PASSWORD)@$(REDIS_HOST):$(REDIS_PORT)/1
+            - --port=9691
+          envFrom:
+            - secretRef:
+                name: pqss-secrets
+            - configMapRef:
+                name: pqss-config
+          ports:
+            - containerPort: 9691
+              name:          metrics
+          resources:
+            requests: { cpu: "50m",  memory: "64Mi" }
+            limits:   { cpu: "200m", memory: "128Mi" }
+          securityContext:
+            runAsNonRoot:             true
+            runAsUser:                65534
+            readOnlyRootFilesystem:   true
+            allowPrivilegeEscalation: false
+
+      volumes:
+        - name: tmp
+          emptyDir: {}
+        - name: app-cache
+          emptyDir: {}
+
+      # ── Image pull secret (private registry) ──────────────────────────────
+      imagePullSecrets:
+        - name: pqss-registry-secret
