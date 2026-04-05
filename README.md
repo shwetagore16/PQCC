@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # PQCC (Post Quantum Cryptography Checker)
 
 PQCC is a full-stack platform that helps security and infrastructure teams assess cryptographic risk, generate CBOM intelligence, and plan migration toward post-quantum cryptography (PQC).
@@ -153,6 +152,3 @@ Interactive docs (when backend is running):
 ## License
 
 Add your preferred license in this repository (MIT/Apache-2.0/Proprietary).
-=======
-# PQCC
->>>>>>> origin/main
