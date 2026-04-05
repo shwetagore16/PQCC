@@ -1,6 +1,47 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
+import { assetsAPI } from '../api/client';
 
 const RiskAnalysisPage: React.FC = () => {
+  const [primaryAsset, setPrimaryAsset] = useState<{ name: string; score: number } | null>(null);
+  const POLL_INTERVAL_MS = 20000;
+  const score = primaryAsset?.score ?? 85;
+  const circleDash = 251.2;
+  const circleOffset = circleDash * (1 - score / 100);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const fetchAssets = async () => {
+      try {
+        const response: any = await assetsAPI.listAssets(1, 200);
+        if (!isMounted) return;
+        const items = response.items ?? [];
+        if (!items.length) return;
+        const top = items.reduce((best: any, asset: any) => {
+          const bestScore = typeof best?.risk_score === 'number' ? best.risk_score : -1;
+          const nextScore = typeof asset?.risk_score === 'number' ? asset.risk_score : -1;
+          return nextScore > bestScore ? asset : best;
+        }, items[0]);
+        const rawScore = typeof top?.risk_score === 'number' ? top.risk_score : 0;
+        const nextScore = Math.max(0, Math.min(100, Math.round(rawScore * 10)));
+        const name = top?.asset_value || `Asset ${top?.id ?? 'unknown'}`;
+        setPrimaryAsset({ name, score: nextScore });
+      } catch (error) {
+        if (isMounted) {
+          console.warn('Failed to refresh risk analysis asset', error);
+        }
+      }
+    };
+
+    fetchAssets();
+    const intervalId = window.setInterval(fetchAssets, POLL_INTERVAL_MS);
+
+    return () => {
+      isMounted = false;
+      window.clearInterval(intervalId);
+    };
+  }, []);
+
   return (
     <div className="flex-1 overflow-y-auto bg-slate-50 dark:bg-background-dark/50 p-8 font-display">
       <div className="max-w-6xl mx-auto space-y-6">
@@ -8,7 +49,7 @@ const RiskAnalysisPage: React.FC = () => {
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
           <div>
             <h2 className="text-3xl font-bold text-slate-900 dark:text-slate-100">Asset Risk Profile</h2>
-            <p className="text-slate-500 text-sm mt-1">Snapshot of vulnerabilities and configuration posture for <span className="text-primary underline">prod-db-cluster-01</span></p>
+            <p className="text-slate-500 text-sm mt-1">Snapshot of vulnerabilities and configuration posture for <span className="text-primary underline">{primaryAsset?.name ?? 'prod-db-cluster-01'}</span></p>
           </div>
           <div className="flex gap-2 text-slate-900 dark:text-slate-100">
             <div className="flex items-center gap-2 px-3 py-1 rounded bg-emerald-500/10 border border-emerald-500/30 text-emerald-500 text-xs font-bold uppercase tracking-wider">Low</div>
@@ -28,10 +69,10 @@ const RiskAnalysisPage: React.FC = () => {
             <div className="relative w-48 h-48">
               <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100">
                 <circle className="text-slate-200 dark:text-slate-700" cx="50" cy="50" fill="transparent" r="40" stroke="currentColor" strokeWidth="10"></circle>
-                <circle className="text-red-500" cx="50" cy="50" fill="transparent" r="40" stroke="currentColor" strokeWidth="10" strokeDasharray="251.2" strokeDashoffset="37.68" strokeLinecap="round"></circle>
+                <circle className="text-red-500" cx="50" cy="50" fill="transparent" r="40" stroke="currentColor" strokeWidth="10" strokeDasharray={circleDash} strokeDashoffset={circleOffset} strokeLinecap="round"></circle>
               </svg>
               <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <span className="text-5xl font-black text-red-500">85</span>
+                <span className="text-5xl font-black text-red-500">{score}</span>
                 <span className="text-xs font-bold text-slate-500">/ 100</span>
               </div>
             </div>

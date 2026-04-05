@@ -25,7 +25,11 @@ class AssetBase(BaseModel):
     organization: str | None = Field(None, max_length=512)
     seed_domain: str | None = Field(None, max_length=512)
     tags: list[str] | None = None
-    metadata_: dict[str, Any] | None = Field(None, alias="metadata")
+    metadata_: dict[str, Any] | None = Field(
+        None,
+        validation_alias="metadata_",
+        serialization_alias="metadata",
+    )
 
 
 # ── Request schemas ──────────────────────────────────────────────────────────

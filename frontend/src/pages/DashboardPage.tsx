@@ -13,11 +13,15 @@ const DashboardPage: React.FC = () => {
   const [summary, setSummary] = useState<Summary | null>(null);
   const [assets, setAssets] = useState<any[]>([]);
   const navigate = useNavigate();
+  const POLL_INTERVAL_MS = 20000;
 
   useEffect(() => {
-    // Fetch assets from backend via API client
-    assetsAPI.listAssets(1, 100)
-      .then((response: any) => {
+    let isMounted = true;
+
+    const fetchAssets = async () => {
+      try {
+        const response: any = await assetsAPI.listAssets(1, 100);
+        if (!isMounted) return;
         const items = response.items ?? [];
         setAssets(items);
         setSummary({
@@ -29,8 +33,20 @@ const DashboardPage: React.FC = () => {
           // Assets with low risk score (<= 3.0)
           pqcReady: items.filter((a: any) => (a.risk_score ?? 0) <= 3.0).length,
         });
-      })
-      .catch((err) => console.error("Error fetching assets:", err));
+      } catch (err) {
+        if (isMounted) {
+          console.error("Error fetching assets:", err);
+        }
+      }
+    };
+
+    fetchAssets();
+    const intervalId = window.setInterval(fetchAssets, POLL_INTERVAL_MS);
+
+    return () => {
+      isMounted = false;
+      window.clearInterval(intervalId);
+    };
   }, []);
 
   const RISK_COLOR: Record<string, string> = {

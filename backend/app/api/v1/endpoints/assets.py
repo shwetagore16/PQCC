@@ -22,7 +22,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.logging import logger
 from app.db.base import get_db
 from app.db.models.asset import AssetStatus, AssetType, MasterAsset
-from app.db.models.cbom import CBOMRecord
+from app.db.models.cbom import CBOMRecord, CryptoCategory, PQCStatus
 from app.schemas.asset import (
     AssetListResponse,
     AssetResponse,
@@ -32,6 +32,7 @@ from app.schemas.asset import (
     SeedDomainIngestionResponse,
     TriggerScanRequest,
 )
+from app.pqc_engine.parser import parse_cbom
 from app.services.pqc_service import PQCService, run_pqc_analysis
 from app.workers.tasks.discovery import (
     ingest_seed_domain,
@@ -292,9 +293,49 @@ async def get_asset_pqc(
 async def upload_cbom(
     asset_id: str,
     cbom_data: dict,
+    db: Annotated[AsyncSession, Depends(get_db)],
 ) -> dict:
     try:
         result = run_pqc_analysis(cbom_data)
+
+        try:
+            asset_uuid = uuid.UUID(asset_id)
+        except ValueError:
+            asset_uuid = None
+
+        if asset_uuid is not None:
+            asset_result = await db.execute(
+                select(MasterAsset).where(MasterAsset.id == asset_uuid)
+            )
+            asset = asset_result.scalar_one_or_none()
+            if asset is not None:
+                status_map = {
+                    "PQC_READY": PQCStatus.SAFE,
+                    "HYBRID": PQCStatus.HYBRID,
+                    "VULNERABLE": PQCStatus.CLASSICAL,
+                }
+                pqc_status = status_map.get(result.get("pqc_status"), PQCStatus.UNKNOWN)
+
+                parsed = parse_cbom(cbom_data)
+                for entry in parsed:
+                    component = entry.get("component") or {}
+                    properties = entry.get("properties") or {}
+
+                    db.add(CBOMRecord(
+                        asset_id=asset_uuid,
+                        algorithm_name=component.get("name") or "CycloneDX CBOM",
+                        category=CryptoCategory.PROTOCOL,
+                        pqc_status=pqc_status,
+                        algorithm_parameters=properties or None,
+                        usage_context="cbom_upload",
+                        cyclonedx_component=component or None,
+                    ))
+
+                if isinstance(result.get("risk_score"), (int, float)):
+                    asset.risk_score = round(result["risk_score"] / 10.0, 2)
+                asset.status = AssetStatus.SCANNED
+                await db.commit()
+
         return {
             "asset_id": asset_id,
             "pqc_status": result.get("pqc_status"),

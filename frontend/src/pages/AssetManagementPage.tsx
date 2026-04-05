@@ -381,7 +381,9 @@ const AssetManagementPage: React.FC = () => {
       setShowCbomModal(false);
       setCbomInput('');
 
-      await fetchPqcAnalysis(selectedAssetId, true);
+      if (!data?.pqc_status) {
+        await fetchPqcAnalysis(selectedAssetId, true);
+      }
     } catch (error) {
       console.error(error);
       alert('Invalid JSON or API error');

@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { assetsAPI } from '../api/client';
 
 interface ClassificationData {
   grade: string;
@@ -49,8 +50,11 @@ const PQCClassificationPage: React.FC = () => {
   ];
 
   const [riskAssets, setRiskAssets] = useState<RiskAsset[]>(initialRiskAssets);
+  const POLL_INTERVAL_MS = 20000;
 
   useEffect(() => {
+    let isMounted = true;
+
     const applyUpdate = (payload: PqcCbomUpdate) => {
       const pqcSupport: RiskAsset['pqcSupport'] = payload.pqcStatus === 'PQC_READY' ? 'Ready' : 'Not Ready';
       const domainLabel = payload.domain ? payload.domain : '(Uploaded CBOM)';
@@ -83,6 +87,43 @@ const PQCClassificationPage: React.FC = () => {
       }
     };
 
+    const applyAssetSnapshot = (items: any[]) => {
+      if (!items.length) return;
+      const mapped: RiskAsset[] = items.map((asset) => {
+        const pqcSupport: RiskAsset['pqcSupport'] = (asset.risk_score ?? 0) <= 3 ? 'Ready' : 'Not Ready';
+        return {
+          id: asset.id,
+          name: asset.asset_value || `Asset ${asset.id}`,
+          domain: asset.seed_domain ? `(${asset.seed_domain})` : '(Uploaded CBOM)',
+          pqcSupport,
+        };
+      });
+
+      setRiskAssets((prev) => {
+        const prevById = new Map(prev.filter((asset) => asset.id).map((asset) => [asset.id, asset]));
+        const merged = mapped.map((asset) => {
+          const existing = asset.id ? prevById.get(asset.id) : undefined;
+          return existing ? { ...asset, ...existing } : asset;
+        });
+        const extras = prev.filter((asset) => asset.id && !mapped.some((item) => item.id === asset.id));
+        return [...merged, ...extras];
+      });
+    };
+
+    const fetchAssets = async () => {
+      try {
+        const response: any = await assetsAPI.listAssets(1, 200);
+        if (!isMounted) return;
+        const items = response.items ?? [];
+        applyAssetSnapshot(items);
+        loadStoredUpdates();
+      } catch (error) {
+        if (isMounted) {
+          console.warn('Failed to refresh assets for PQC dashboard', error);
+        }
+      }
+    };
+
     const handleCustomUpdate = (event: Event) => {
       const detail = (event as CustomEvent<PqcCbomUpdate>).detail;
       if (detail) {
@@ -97,10 +138,14 @@ const PQCClassificationPage: React.FC = () => {
     };
 
     loadStoredUpdates();
+    fetchAssets();
+    const intervalId = window.setInterval(fetchAssets, POLL_INTERVAL_MS);
     window.addEventListener('pqc-cbom-updated', handleCustomUpdate as EventListener);
     window.addEventListener('storage', handleStorageUpdate);
 
     return () => {
+      isMounted = false;
+      window.clearInterval(intervalId);
       window.removeEventListener('pqc-cbom-updated', handleCustomUpdate as EventListener);
       window.removeEventListener('storage', handleStorageUpdate);
     };

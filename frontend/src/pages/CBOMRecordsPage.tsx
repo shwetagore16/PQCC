@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
+import { assetsAPI, cbomAPI } from '../api/client';
 
 interface CBOMRecord {
   assetName: string;
@@ -21,6 +22,83 @@ const cbomRecords: CBOMRecord[] = [
 ];
 
 const CBOMRecordsPage: React.FC = () => {
+  const [records, setRecords] = useState<CBOMRecord[]>(cbomRecords);
+  const POLL_INTERVAL_MS = 20000;
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const toReadiness = (status?: string): CBOMRecord['pqcReadiness'] => {
+      switch (status) {
+        case 'safe':
+          return 'Ready';
+        case 'hybrid':
+          return 'PQC Native';
+        case 'deprecated':
+          return 'Critical';
+        case 'classical':
+        case 'unknown':
+        default:
+          return 'At Risk';
+      }
+    };
+
+    const extractKeySize = (value?: string) => {
+      if (!value) return '—';
+      const match = value.match(/(\d{3,4})/);
+      return match ? `${match[1]}-bit` : '—';
+    };
+
+    const mapApiRecords = (apiRecords: any[], assets: any[]) => {
+      const assetNameById = new Map(assets.map((asset) => [asset.id, asset.asset_value]));
+      return apiRecords.map((record) => {
+        const category = record.category as string | undefined;
+        const algorithmName = record.algorithm_name as string | undefined;
+        const assetName = assetNameById.get(record.asset_id) || `Asset ${record.asset_id}`;
+        const lastConfirmed = typeof record.last_confirmed === 'string' ? record.last_confirmed.slice(0, 10) : '—';
+
+        return {
+          assetName,
+          tlsVersion: category === 'protocol' ? (algorithmName || '—') : '—',
+          cipher: category === 'symmetric_cipher' ? (algorithmName || '—') : '—',
+          keySize: extractKeySize(algorithmName),
+          keyExchange: category === 'key_exchange' ? (algorithmName || '—') : '—',
+          sigAlgo: category === 'digital_signature' ? (algorithmName || '—') : '—',
+          certExpiry: lastConfirmed,
+          pqcReadiness: toReadiness(record.pqc_status),
+        } as CBOMRecord;
+      });
+    };
+
+    const fetchRecords = async () => {
+      try {
+        const [cbomResponse, assetsResponse]: any = await Promise.all([
+          cbomAPI.listRecords(),
+          assetsAPI.listAssets(1, 500),
+        ]);
+        if (!isMounted) return;
+        const apiRecords = Array.isArray(cbomResponse) ? cbomResponse : [];
+        const assets = assetsResponse?.items ?? [];
+        const nextRecords = mapApiRecords(apiRecords, assets);
+        if (nextRecords.length) {
+          setRecords(nextRecords);
+        }
+      } catch (error) {
+        if (isMounted) {
+          console.warn('Failed to refresh CBOM records', error);
+        }
+      }
+    };
+
+    fetchRecords();
+    const intervalId = window.setInterval(fetchRecords, POLL_INTERVAL_MS);
+
+    return () => {
+      isMounted = false;
+      window.clearInterval(intervalId);
+    };
+  }, []);
+
   const getReadinessStyle = (status: CBOMRecord['pqcReadiness']) => {
     switch (status) {
       case 'Ready': return 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20';
@@ -78,7 +156,7 @@ const CBOMRecordsPage: React.FC = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-slate-700 dark:text-slate-300">
-                {cbomRecords.map((record, i) => (
+                {records.map((record, i) => (
                   <tr key={i} className="hover:bg-primary/5 transition-colors group">
                     <td className="px-4 py-4 text-sm font-bold border-r border-slate-100 dark:border-slate-800">{record.assetName}</td>
                     <td className="px-4 py-4 text-sm border-r border-slate-100 dark:border-slate-800">
