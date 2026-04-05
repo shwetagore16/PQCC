@@ -43,6 +43,9 @@ _driver: AsyncDriver | None = None
 async def init_neo4j() -> None:
     """Initialise the Neo4j async driver at application startup."""
     global _driver
+    if not settings.NEO4J_ENABLED:
+        logger.info("neo4j_disabled")
+        return
     _driver = AsyncGraphDatabase.driver(
         settings.NEO4J_URI,
         auth=(settings.NEO4J_USER, settings.NEO4J_PASSWORD),

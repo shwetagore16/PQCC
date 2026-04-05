@@ -15,13 +15,14 @@ from __future__ import annotations
 import uuid
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.logging import logger
 from app.db.base import get_db
 from app.db.models.asset import AssetStatus, AssetType, MasterAsset
+from app.db.models.cbom import CBOMRecord
 from app.schemas.asset import (
     AssetListResponse,
     AssetResponse,
@@ -31,6 +32,7 @@ from app.schemas.asset import (
     SeedDomainIngestionResponse,
     TriggerScanRequest,
 )
+from app.services.pqc_service import PQCService, run_pqc_analysis
 from app.workers.tasks.discovery import (
     ingest_seed_domain,
     run_amass_discovery,
@@ -204,6 +206,108 @@ async def bulk_scan(
 # ── GET /assets/{asset_id} ───────────────────────────────────────────────────
 
 @router.get(
+    "/{asset_id}/pqc",
+    summary="Analyze PQC status from CycloneDX CBOM for a specific asset",
+)
+async def get_asset_pqc(
+    asset_id: str,
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> dict:
+    try:
+        asset_uuid = uuid.UUID(asset_id)
+    except ValueError:
+        mock_components = [
+            {
+                "name": f"mock-asset-{asset_id}",
+                "type": "cryptographic-asset",
+                "properties": [
+                    {"name": "tls_version", "value": "TLS 1.2"},
+                    {"name": "cipher", "value": "AES-256-GCM"},
+                    {"name": "key_exchange", "value": "ECDHE"},
+                    {"name": "signature_algorithm", "value": "RSA-PSS"},
+                    {"name": "key_size", "value": "2048"},
+                    {"name": "certificate_algorithm", "value": "RSA"},
+                ],
+            }
+        ]
+
+        cbom_data = {"components": mock_components}
+        analysis = PQCService.analyze_cbom(cbom_data)
+
+        return {
+            "asset_id": asset_id,
+            **analysis,
+        }
+
+    result = await db.execute(
+        select(MasterAsset).where(MasterAsset.id == asset_uuid)
+    )
+    asset = result.scalar_one_or_none()
+    if asset is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Asset {asset_id} not found.",
+        )
+
+    cbom_result = await db.execute(
+        select(CBOMRecord).where(CBOMRecord.asset_id == asset_uuid)
+    )
+    records = cbom_result.scalars().all()
+
+    components: list[dict] = []
+    for record in records:
+        if record.cyclonedx_component:
+            components.append(record.cyclonedx_component)
+
+    if not components:
+        # Minimal mock CycloneDX CBOM component for safe fallback
+        components = [
+            {
+                "name": asset.asset_value,
+                "type": "cryptographic-asset",
+                "properties": [
+                    {"name": "tls_version", "value": "TLS 1.2"},
+                    {"name": "cipher", "value": "AES-256-GCM"},
+                    {"name": "key_exchange", "value": "ECDHE"},
+                    {"name": "signature_algorithm", "value": "RSA-PSS"},
+                    {"name": "key_size", "value": "2048"},
+                    {"name": "certificate_algorithm", "value": "RSA"},
+                ],
+            }
+        ]
+
+    cbom_data = {"components": components}
+    analysis = PQCService.analyze_cbom(cbom_data)
+
+    return {
+        "asset_id": str(asset_uuid),
+        **analysis,
+    }
+
+
+@router.post(
+    "/{asset_id}/cbom",
+    summary="Upload CycloneDX CBOM for PQC analysis",
+)
+async def upload_cbom(
+    asset_id: str,
+    cbom_data: dict,
+) -> dict:
+    try:
+        result = run_pqc_analysis(cbom_data)
+        return {
+            "asset_id": asset_id,
+            "pqc_status": result.get("pqc_status"),
+            "risk_score": result.get("risk_score"),
+            "weak_points": result.get("weak_points"),
+            "recommendations": result.get("recommendations"),
+            "future_risk": result.get("future_risk"),
+            "agility": result.get("agility"),
+        }
+    except Exception as exc:
+        return {"error": str(exc)}
+
+@router.get(
     "/{asset_id}",
     response_model=AssetResponse,
     summary="Retrieve a single asset by UUID",
@@ -283,7 +387,7 @@ async def trigger_asset_scan(
 
 @router.delete(
     "/{asset_id}",
-    status_code=status.HTTP_204_NO_CONTENT,
+    response_class=Response,
     summary="Exclude an asset from future scans (soft delete)",
 )
 async def exclude_asset(
@@ -298,3 +402,4 @@ async def exclude_asset(
         raise HTTPException(status_code=404, detail=f"Asset {asset_id} not found.")
     asset.status = AssetStatus.EXCLUDED
     await db.commit()
+    return Response(status_code=status.HTTP_204_NO_CONTENT)

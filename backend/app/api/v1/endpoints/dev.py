@@ -8,7 +8,6 @@ from fastapi import APIRouter, BackgroundTasks, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.base import get_db
-from app.workers.tasks.scans import run_tls_scan
 from app.workers.tasks.discovery import ingest_seed_domain
 
 router = APIRouter(prefix="/dev", tags=["Dev/Simulation"])

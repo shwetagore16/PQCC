@@ -62,7 +62,7 @@ class MasterAsset(Base):
         Index("ix_master_assets_risk_score", "risk_score"),
         Index(
             "ix_master_assets_metadata_gin",
-            "metadata_",
+            "metadata",
             postgresql_using="gin",
         ),
     )

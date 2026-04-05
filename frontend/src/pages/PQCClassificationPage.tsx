@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 
 interface ClassificationData {
   grade: string;
@@ -13,9 +13,19 @@ interface ApplicationStatusData {
 }
 
 interface RiskAsset {
+  id?: string;
   name: string;
   domain: string;
   pqcSupport: 'Ready' | 'Not Ready';
+}
+
+interface PqcCbomUpdate {
+  assetId: string;
+  name: string;
+  domain: string;
+  pqcStatus: string;
+  riskScore: number;
+  updatedAt: string;
 }
 
 const PQCClassificationPage: React.FC = () => {
@@ -32,11 +42,69 @@ const PQCClassificationPage: React.FC = () => {
     { label: 'Critical', value: 10, color: '#ef4444' },
   ];
 
-  const riskAssets: RiskAsset[] = [
+  const initialRiskAssets: RiskAsset[] = [
     { name: 'digigrihavatika.pnbatt.bank.in', domain: '(103.109.225.128)', pqcSupport: 'Ready' },
     { name: 'wcw.pnb.bank.in', domain: '(103.109.225.201)', pqcSupport: 'Ready' },
     { name: 'Wbbgb.pnbubk.bank.in', domain: '(103.109.224.249)', pqcSupport: 'Not Ready' },
   ];
+
+  const [riskAssets, setRiskAssets] = useState<RiskAsset[]>(initialRiskAssets);
+
+  useEffect(() => {
+    const applyUpdate = (payload: PqcCbomUpdate) => {
+      const pqcSupport: RiskAsset['pqcSupport'] = payload.pqcStatus === 'PQC_READY' ? 'Ready' : 'Not Ready';
+      const domainLabel = payload.domain ? payload.domain : '(Uploaded CBOM)';
+      const nextAsset: RiskAsset = {
+        id: payload.assetId,
+        name: payload.name || `Asset ${payload.assetId}`,
+        domain: domainLabel,
+        pqcSupport,
+      };
+
+      setRiskAssets((prev) => {
+        const existingIndex = prev.findIndex((asset) => asset.id === payload.assetId || asset.name === nextAsset.name);
+        if (existingIndex >= 0) {
+          const updated = [...prev];
+          updated[existingIndex] = { ...updated[existingIndex], ...nextAsset };
+          return updated;
+        }
+        return [nextAsset, ...prev];
+      });
+    };
+
+    const loadStoredUpdates = () => {
+      try {
+        const stored = localStorage.getItem('pqcCbomUpdates');
+        if (!stored) return;
+        const parsed = JSON.parse(stored) as Record<string, PqcCbomUpdate>;
+        Object.values(parsed).forEach((payload) => applyUpdate(payload));
+      } catch (error) {
+        console.warn('Failed to load PQC updates', error);
+      }
+    };
+
+    const handleCustomUpdate = (event: Event) => {
+      const detail = (event as CustomEvent<PqcCbomUpdate>).detail;
+      if (detail) {
+        applyUpdate(detail);
+      }
+    };
+
+    const handleStorageUpdate = (event: StorageEvent) => {
+      if (event.key === 'pqcCbomUpdates') {
+        loadStoredUpdates();
+      }
+    };
+
+    loadStoredUpdates();
+    window.addEventListener('pqc-cbom-updated', handleCustomUpdate as EventListener);
+    window.addEventListener('storage', handleStorageUpdate);
+
+    return () => {
+      window.removeEventListener('pqc-cbom-updated', handleCustomUpdate as EventListener);
+      window.removeEventListener('storage', handleStorageUpdate);
+    };
+  }, []);
 
   const getMaxCount = () => Math.max(...classificationData.map(d => d.count));
   const maxCount = getMaxCount();

@@ -27,7 +27,7 @@ target_metadata = Base.metadata
 
 # ── Inject the DB URL from settings ─────────────────────────────────────────
 settings = get_settings()
-config.set_main_option("sqlalchemy.url", settings.SYNC_DATABASE_URL)
+config.set_main_option("sqlalchemy.url", settings.DATABASE_URL)
 
 
 # ── Offline mode (generate SQL script) ──────────────────────────────────────

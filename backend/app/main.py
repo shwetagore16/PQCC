@@ -52,9 +52,12 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     await init_neo4j()
 
     # (Optional) warm-up the PG connection pool
-    async with engine.connect() as conn:
-        await conn.execute(__import__("sqlalchemy").text("SELECT 1"))
-    logger.info("postgres_pool_warmed")
+    if settings.POSTGRES_ENABLED:
+        async with engine.connect() as conn:
+            await conn.execute(__import__("sqlalchemy").text("SELECT 1"))
+        logger.info("postgres_pool_warmed")
+    else:
+        logger.info("postgres_disabled")
 
     yield  # ← server accepts requests here
 

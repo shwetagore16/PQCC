@@ -1,4 +1,6 @@
-import React, { useState, useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
+
+import { assetsAPI } from '../api/client';
 
 interface Asset {
   id: string;
@@ -7,9 +9,31 @@ interface Asset {
   domain: string;
   owner: string;
   status: 'Active' | 'Pending' | 'Offline';
-  pqcStatus: 'Ready' | 'Not Ready';
+  pqcStatus: string;
   riskScore: number;
   lastScan: string;
+}
+
+interface PqcAnalysis {
+  pqc_status: string;
+  risk_score: number;
+  weak_points: string[];
+  recommendations: string[];
+  future_risk: string;
+  agility: string;
+}
+
+interface AssetApiItem {
+  id: string;
+  asset_type: string;
+  asset_value: string;
+  organization?: string | null;
+  status: string;
+  last_scanned?: string | null;
+}
+
+interface AssetListResponse {
+  items: AssetApiItem[];
 }
 
 interface AssetConnection {
@@ -227,9 +251,205 @@ const TopologicalAssetView: React.FC<{ assets: Asset[]; connections: AssetConnec
 };
 
 const AssetManagementPage: React.FC = () => {
-  const [assets] = useState<Asset[]>(initialAssets);
+  const [assets, setAssets] = useState<Asset[]>(initialAssets);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [viewMode, setViewMode] = useState<'table' | 'topological'>('table');
+  const [pqcByAssetId, setPqcByAssetId] = useState<Record<string, PqcAnalysis | null>>({});
+  const [pqcLoading, setPqcLoading] = useState<Record<string, boolean>>({});
+  const [pqcError, setPqcError] = useState<Record<string, boolean>>({});
+  const [selectedAssetId, setSelectedAssetId] = useState<string | null>(null);
+  const [isPqcModalOpen, setIsPqcModalOpen] = useState(false);
+  const [cbomInput, setCbomInput] = useState('');
+  const [showCbomModal, setShowCbomModal] = useState(false);
+  const [cbomLoading, setCbomLoading] = useState(false);
+
+  const mapAssetStatus = (status: string): Asset['status'] => {
+    switch (status) {
+      case 'scanned':
+        return 'Active';
+      case 'scanning':
+      case 'pending':
+        return 'Pending';
+      case 'error':
+      case 'excluded':
+        return 'Offline';
+      default:
+        return 'Pending';
+    }
+  };
+
+  const formatLastScan = (value?: string | null) => {
+    if (!value) return 'Never';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return 'Unknown';
+    return date.toLocaleDateString();
+  };
+
+  const getPqcStatusClass = (status: string) => {
+    if (status === 'PQC_READY') return 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30';
+    if (status === 'HYBRID') return 'bg-amber-500/20 text-amber-400 border-amber-500/30';
+    if (status === 'VULNERABLE') return 'bg-red-500/20 text-red-400 border-red-500/30';
+    return 'bg-slate-500/10 text-slate-400 border-slate-500/20';
+  };
+
+  const fetchPqcAnalysis = async (assetId: string, force: boolean = false) => {
+    if (!force && (pqcLoading[assetId] || pqcByAssetId[assetId] || pqcError[assetId])) return;
+
+    setPqcLoading((prev) => ({ ...prev, [assetId]: true }));
+    setPqcError((prev) => ({ ...prev, [assetId]: false }));
+
+    try {
+      const response = await assetsAPI.getAssetPqc(assetId) as { analysis?: PqcAnalysis } & PqcAnalysis;
+      const analysis = response.analysis ?? response;
+
+      setPqcByAssetId((prev) => ({ ...prev, [assetId]: analysis }));
+    } catch (error) {
+      setPqcError((prev) => ({ ...prev, [assetId]: true }));
+      setPqcByAssetId((prev) => ({ ...prev, [assetId]: null }));
+    } finally {
+      setPqcLoading((prev) => ({ ...prev, [assetId]: false }));
+    }
+  };
+
+  const handleCbomSubmit = async () => {
+    if (!selectedAssetId) return;
+
+    try {
+      setCbomLoading(true);
+
+      const parsed = JSON.parse(cbomInput);
+
+      const safeAssetId = encodeURIComponent(selectedAssetId);
+      const response = await fetch(
+        `/api/v1/assets/${safeAssetId}/cbom`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(parsed),
+        }
+      );
+
+      const data = await response.json();
+      const normalized: PqcAnalysis = {
+        pqc_status: data.pqc_status ?? 'No PQC data',
+        risk_score: typeof data.risk_score === 'number' ? data.risk_score : 0,
+        weak_points: Array.isArray(data.weak_points) ? data.weak_points : [],
+        recommendations: Array.isArray(data.recommendations) ? data.recommendations : [],
+        future_risk: data.future_risk ?? 'UNKNOWN',
+        agility: data.agility ?? 'UNKNOWN',
+      };
+
+      setAssets((prevAssets) =>
+        prevAssets.map((asset) =>
+          asset.id === selectedAssetId
+            ? {
+              ...asset,
+              pqcStatus: normalized.pqc_status,
+              riskScore: normalized.risk_score,
+            }
+            : asset
+        )
+      );
+      setPqcByAssetId((prev) => ({ ...prev, [selectedAssetId]: normalized }));
+      setPqcError((prev) => ({ ...prev, [selectedAssetId]: false }));
+
+      const assetMeta = assets.find((asset) => asset.id === selectedAssetId);
+      const cbomUpdate = {
+        assetId: selectedAssetId,
+        name: assetMeta?.name || `Asset ${selectedAssetId}`,
+        domain: assetMeta?.domain || '',
+        pqcStatus: normalized.pqc_status,
+        riskScore: normalized.risk_score,
+        updatedAt: new Date().toISOString(),
+      };
+
+      try {
+        const stored = localStorage.getItem('pqcCbomUpdates');
+        const parsedStored = stored ? JSON.parse(stored) : {};
+        parsedStored[selectedAssetId] = cbomUpdate;
+        localStorage.setItem('pqcCbomUpdates', JSON.stringify(parsedStored));
+        window.dispatchEvent(new CustomEvent('pqc-cbom-updated', { detail: cbomUpdate }));
+      } catch (storageError) {
+        console.warn('Failed to persist PQC update', storageError);
+      }
+      console.log('PQC Result:', data);
+
+      alert('PQC analysis updated!');
+
+      setShowCbomModal(false);
+      setCbomInput('');
+
+      await fetchPqcAnalysis(selectedAssetId, true);
+    } catch (error) {
+      console.error(error);
+      alert('Invalid JSON or API error');
+    } finally {
+      setCbomLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadAssets = async () => {
+      try {
+        const response = await assetsAPI.listAssets(1, 50) as AssetListResponse;
+        if (cancelled) return;
+
+        if (response?.items?.length) {
+          const mappedAssets = response.items.map((item) => ({
+            id: item.id,
+            name: item.asset_value,
+            type: item.asset_type,
+            domain: item.asset_value,
+            owner: item.organization || 'Unassigned',
+            status: mapAssetStatus(item.status),
+            pqcStatus: 'Loading...',
+            riskScore: 0,
+            lastScan: formatLastScan(item.last_scanned),
+          }));
+
+          setAssets(mappedAssets);
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setAssets(initialAssets);
+        }
+      }
+    };
+
+    loadAssets();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    assets.forEach((asset) => {
+      void fetchPqcAnalysis(asset.id);
+    });
+  }, [assets]);
+
+  const assetsWithPqc = useMemo(() => {
+    return assets.map((asset) => {
+      const pqc = pqcByAssetId[asset.id];
+      const riskScore = typeof pqc?.risk_score === 'number'
+        ? pqc.risk_score
+        : typeof asset.riskScore === 'number'
+          ? asset.riskScore
+          : 0;
+      const status = pqc?.pqc_status || asset.pqcStatus || 'No PQC data';
+
+      return {
+        ...asset,
+        pqcStatus: status,
+        riskScore,
+      };
+    });
+  }, [assets, pqcByAssetId]);
 
   const getRiskColor = (score: number) => {
     if (score < 4) return 'text-emerald-500 bg-emerald-500/10 border-emerald-500/20';
@@ -302,31 +522,72 @@ const AssetManagementPage: React.FC = () => {
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100 dark:divide-primary/10 text-slate-700 dark:text-slate-300">
-            {assets.map((asset) => (
-              <tr key={asset.id} className="hover:bg-slate-50 dark:hover:bg-primary/5 transition-colors group">
+            {assets.map((asset) => {
+              const pqc = pqcByAssetId[asset.id];
+              const isLoading = pqcLoading[asset.id];
+              const hasError = pqcError[asset.id];
+              const hasPqc = Boolean(pqc);
+
+              return (
+              <tr
+                key={asset.id}
+                onClick={() => {
+                  setSelectedAssetId(asset.id);
+                  setIsPqcModalOpen(true);
+                  void fetchPqcAnalysis(asset.id, true);
+                }}
+                className="hover:bg-slate-50 dark:hover:bg-primary/5 transition-colors group cursor-pointer"
+              >
                 <td className="px-6 py-4 text-sm font-mono text-slate-400">{asset.id}</td>
                 <td className="px-6 py-4 text-sm font-bold">{asset.name}</td>
                 <td className="px-6 py-4 text-sm">{asset.type}</td>
                 <td className="px-6 py-4">
-                  <span className={`px-2 py-1 rounded text-[10px] font-black uppercase tracking-tighter border ${asset.pqcStatus === 'Ready' ? 'bg-teal-500/20 text-teal-400 border-teal-500/30' : 'bg-red-500/20 text-red-400 border-red-500/30'}`}>
-                    {asset.pqcStatus}
-                  </span>
+                  {isLoading ? (
+                    <span className="text-xs text-slate-400">Loading...</span>
+                  ) : hasError || !hasPqc ? (
+                    <span className="text-xs text-slate-400">No PQC data</span>
+                  ) : (
+                    <span className={`px-2 py-1 rounded text-[10px] font-black uppercase tracking-tighter border ${getPqcStatusClass(pqc.pqc_status)}`}>
+                      {pqc.pqc_status}
+                    </span>
+                  )}
                 </td>
                 <td className="px-6 py-4">
-                  <span className={`px-3 py-1 rounded-full text-xs font-bold border ${getRiskColor(asset.riskScore)}`}>
-                    {asset.riskScore.toFixed(1)}
-                  </span>
+                  {isLoading ? (
+                    <span className="text-xs text-slate-400">Loading...</span>
+                  ) : hasError || !hasPqc ? (
+                    <span className="text-xs text-slate-400">No PQC data</span>
+                  ) : (
+                    <span className={`px-3 py-1 rounded-full text-xs font-bold border ${getRiskColor(pqc.risk_score)}`}>
+                      {pqc.risk_score.toFixed(1)}
+                    </span>
+                  )}
                 </td>
                 <td className="px-6 py-4 text-sm text-slate-600 dark:text-slate-400">{asset.domain}</td>
                 <td className="px-6 py-4 text-sm">{asset.status}</td>
                 <td className="px-6 py-4 text-sm text-slate-500">{asset.lastScan}</td>
                 <td className="px-6 py-4 text-right">
+                  <button
+                    style={{
+                      padding: '6px 10px',
+                      fontSize: '12px',
+                      marginLeft: '8px',
+                    }}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      setSelectedAssetId(asset.id);
+                      setShowCbomModal(true);
+                    }}
+                  >
+                    Upload CBOM
+                  </button>
                   <button className="p-1.5 opacity-0 group-hover:opacity-100 hover:bg-slate-200 dark:hover:bg-primary/20 rounded">
                     <span className="material-symbols-outlined text-lg">more_vert</span>
                   </button>
                 </td>
               </tr>
-            ))}
+            );
+            })}
           </tbody>
         </table>
 
@@ -343,7 +604,7 @@ const AssetManagementPage: React.FC = () => {
         </div>
       </div>
       ) : (
-        <TopologicalAssetView assets={assets} connections={assetConnections} />
+        <TopologicalAssetView assets={assetsWithPqc} connections={assetConnections} />
       )}
 
       {/* Modal Dialog */}
@@ -395,6 +656,124 @@ const AssetManagementPage: React.FC = () => {
                 className="px-6 py-2 bg-primary text-white rounded font-bold text-sm shadow-lg shadow-primary/30 hover:brightness-110 active:scale-95 transition-all"
               >
                 Create Asset
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* PQC Analysis Modal */}
+      {isPqcModalOpen && (
+        <div className="fixed inset-0 bg-background-dark/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="w-full max-w-2xl bg-white dark:bg-background-dark border border-slate-200 dark:border-primary/30 rounded-xl shadow-2xl overflow-hidden">
+            <div className="px-6 py-4 border-b border-slate-100 dark:border-primary/20 flex items-center justify-between bg-slate-50 dark:bg-primary/5">
+              <div>
+                <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">PQC Analysis</h3>
+                <p className="text-xs text-slate-500">Asset: {assets.find((a) => a.id === selectedAssetId)?.name || 'Unknown'}</p>
+              </div>
+              <button
+                onClick={() => setIsPqcModalOpen(false)}
+                className="p-1 hover:bg-slate-200 dark:hover:bg-primary/20 rounded text-slate-500"
+              >
+                <span className="material-symbols-outlined">close</span>
+              </button>
+            </div>
+            <div className="p-6 space-y-4 text-sm">
+              {selectedAssetId && pqcLoading[selectedAssetId] ? (
+                <div className="text-slate-500">Loading...</div>
+              ) : selectedAssetId && (pqcError[selectedAssetId] || !pqcByAssetId[selectedAssetId]) ? (
+                <div className="text-slate-500">No PQC data</div>
+              ) : (
+                <>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="p-3 rounded-lg border border-slate-200 dark:border-primary/20">
+                      <div className="text-xs uppercase tracking-wider text-slate-400">Future Risk</div>
+                      <div className="text-base font-bold text-slate-900 dark:text-slate-100">{selectedAssetId ? pqcByAssetId[selectedAssetId]?.future_risk : '-'}</div>
+                    </div>
+                    <div className="p-3 rounded-lg border border-slate-200 dark:border-primary/20">
+                      <div className="text-xs uppercase tracking-wider text-slate-400">Agility</div>
+                      <div className="text-base font-bold text-slate-900 dark:text-slate-100">{selectedAssetId ? pqcByAssetId[selectedAssetId]?.agility : '-'}</div>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      <div className="text-xs uppercase tracking-wider text-slate-400 mb-2">Weak Points</div>
+                      <ul className="space-y-1 text-slate-700 dark:text-slate-300">
+                        {(selectedAssetId ? pqcByAssetId[selectedAssetId]?.weak_points : [])?.map((item, idx) => (
+                          <li key={`weak-${idx}`}>• {item}</li>
+                        ))}
+                        {(selectedAssetId ? pqcByAssetId[selectedAssetId]?.weak_points : [])?.length === 0 && (
+                          <li className="text-slate-400">None reported</li>
+                        )}
+                      </ul>
+                    </div>
+                    <div>
+                      <div className="text-xs uppercase tracking-wider text-slate-400 mb-2">Recommendations</div>
+                      <ul className="space-y-1 text-slate-700 dark:text-slate-300">
+                        {(selectedAssetId ? pqcByAssetId[selectedAssetId]?.recommendations : [])?.map((item, idx) => (
+                          <li key={`rec-${idx}`}>• {item}</li>
+                        ))}
+                        {(selectedAssetId ? pqcByAssetId[selectedAssetId]?.recommendations : [])?.length === 0 && (
+                          <li className="text-slate-400">None reported</li>
+                        )}
+                      </ul>
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showCbomModal && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            width: '100%',
+            height: '100%',
+            backgroundColor: 'rgba(0,0,0,0.5)',
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            zIndex: 9999,
+          }}
+        >
+          <div
+            style={{
+              background: '#fff',
+              padding: '20px',
+              borderRadius: '10px',
+              width: '500px',
+            }}
+          >
+            <h3>Upload CBOM (CycloneDX)</h3>
+            <textarea
+              value={cbomInput}
+              onChange={(e) => setCbomInput(e.target.value)}
+              rows={10}
+              placeholder="Paste CycloneDX JSON here..."
+              style={{
+                width: '100%',
+                marginTop: '10px',
+                padding: '10px',
+                fontSize: '12px',
+              }}
+            />
+            <div style={{ marginTop: '10px' }}>
+              <button onClick={handleCbomSubmit} disabled={cbomLoading}>
+                {cbomLoading ? 'Processing...' : 'Submit'}
+              </button>
+              <button
+                style={{ marginLeft: '10px' }}
+                onClick={() => {
+                  setShowCbomModal(false);
+                  setCbomInput('');
+                }}
+              >
+                Cancel
               </button>
             </div>
           </div>

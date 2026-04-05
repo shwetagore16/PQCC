@@ -84,7 +84,16 @@ export const assetsAPI = {
    * Get single asset by ID
    */
   async getAsset(assetId: string) {
-    return apiRequest(`/assets/${assetId}`, { method: 'GET' });
+    const safeAssetId = encodeURIComponent(assetId);
+    return apiRequest(`/assets/${safeAssetId}`, { method: 'GET' });
+  },
+
+  /**
+   * Get PQC analysis for a single asset
+   */
+  async getAssetPqc(assetId: string) {
+    const safeAssetId = encodeURIComponent(assetId);
+    return apiRequest(`/assets/${safeAssetId}/pqc`, { method: 'GET' });
   },
 
   /**
@@ -105,7 +114,8 @@ export const assetsAPI = {
    * Trigger on-demand scan for specific asset
    */
   async triggerScan(assetId: string, scanTypes: string[] = ['tls'], priority: number = 5) {
-    return apiRequest(`/assets/${assetId}/scan`, {
+    const safeAssetId = encodeURIComponent(assetId);
+    return apiRequest(`/assets/${safeAssetId}/scan`, {
       method: 'POST',
       body: {
         scan_types: scanTypes,

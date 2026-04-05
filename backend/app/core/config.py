@@ -32,6 +32,7 @@ class Settings(BaseSettings):
     POSTGRES_USER: str = "pqss"
     POSTGRES_PASSWORD: str = "pqss_secret"
     POSTGRES_DB: str = "pqss_db"
+    POSTGRES_ENABLED: bool = True
 
     @property
     def DATABASE_URL(self) -> str:  # noqa: N802
@@ -51,6 +52,7 @@ class Settings(BaseSettings):
     NEO4J_URI: str = "bolt://localhost:7687"
     NEO4J_USER: str = "neo4j"
     NEO4J_PASSWORD: str = "neo4j_secret"
+    NEO4J_ENABLED: bool = True
 
     # ── Redis / Celery ───────────────────────────────────────────────────────
     REDIS_URL: str = "redis://localhost:6379/0"
