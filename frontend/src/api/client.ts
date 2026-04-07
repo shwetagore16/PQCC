@@ -52,6 +52,34 @@ async function apiRequest<T>(endpoint: string, options: RequestOptions = {}): Pr
   return response.json();
 }
 
+async function apiRequestBlob(endpoint: string, options: RequestOptions = {}): Promise<Blob> {
+  const url = new URL(endpoint.startsWith('http') ? endpoint : `${API_V1}${endpoint}`);
+
+  if (options.params) {
+    Object.entries(options.params).forEach(([key, value]) => {
+      if (value !== null && value !== undefined) {
+        url.searchParams.append(key, String(value));
+      }
+    });
+  }
+
+  const config: RequestInit = {
+    method: options.method || 'GET',
+    headers: {
+      ...options.headers,
+    },
+  };
+
+  const response = await fetch(url.toString(), config);
+
+  if (!response.ok) {
+    const error = await response.text();
+    throw new Error(`API Error [${response.status}]: ${error}`);
+  }
+
+  return response.blob();
+}
+
 // ════════════════════════════════════════════════════════════════════════════
 // ASSETS API
 // ════════════════════════════════════════════════════════════════════════════
@@ -94,6 +122,33 @@ export const assetsAPI = {
   async getAssetPqc(assetId: string) {
     const safeAssetId = encodeURIComponent(assetId);
     return apiRequest(`/assets/${safeAssetId}/pqc`, { method: 'GET' });
+  },
+
+  /**
+   * Batch PQC analysis for multiple assets
+   */
+  async batchAssetPqc(assetIds: string[]) {
+    return apiRequest('/assets/pqc/batch', {
+      method: 'POST',
+      body: { asset_ids: assetIds },
+    });
+  },
+
+  /**
+   * Download asset PQC report
+   */
+  async getAssetReport(assetId: string, format: 'json' | 'pdf' = 'pdf') {
+    const safeAssetId = encodeURIComponent(assetId);
+    if (format === 'json') {
+      return apiRequest(`/assets/${safeAssetId}/report`, {
+        method: 'GET',
+        params: { format },
+      });
+    }
+    return apiRequestBlob(`/assets/${safeAssetId}/report`, {
+      method: 'GET',
+      params: { format },
+    });
   },
 
   /**

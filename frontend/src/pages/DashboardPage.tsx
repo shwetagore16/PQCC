@@ -12,6 +12,7 @@ interface Summary {
 const DashboardPage: React.FC = () => {
   const [summary, setSummary] = useState<Summary | null>(null);
   const [assets, setAssets] = useState<any[]>([]);
+  const [topPqc, setTopPqc] = useState<{ hndl?: number; agility?: number; asset?: string } | null>(null);
   const navigate = useNavigate();
   const POLL_INTERVAL_MS = 20000;
 
@@ -33,6 +34,30 @@ const DashboardPage: React.FC = () => {
           // Assets with low risk score (<= 3.0)
           pqcReady: items.filter((a: any) => (a.risk_score ?? 0) <= 3.0).length,
         });
+
+        if (items.length) {
+          const top = items.reduce((best: any, asset: any) => {
+            const bestScore = typeof best?.risk_score === 'number' ? best.risk_score : -1;
+            const nextScore = typeof asset?.risk_score === 'number' ? asset.risk_score : -1;
+            return nextScore > bestScore ? asset : best;
+          }, items[0]);
+
+          if (top?.id) {
+            try {
+              const pqc: any = await assetsAPI.getAssetPqc(top.id);
+              if (!isMounted) return;
+              setTopPqc({
+                hndl: pqc?.hndl_score?.score,
+                agility: pqc?.crypto_agility_score?.score,
+                asset: top?.asset_value,
+              });
+            } catch (error) {
+              if (isMounted) {
+                setTopPqc(null);
+              }
+            }
+          }
+        }
       } catch (err) {
         if (isMounted) {
           console.error("Error fetching assets:", err);
@@ -54,6 +79,11 @@ const DashboardPage: React.FC = () => {
     high: 'text-orange-500',
     medium: 'text-amber-500', 
     low: 'text-green-500',
+  };
+
+  const formatScore = (value?: number) => {
+    if (typeof value !== 'number' || Number.isNaN(value)) return '-';
+    return value.toFixed(1);
   };
 
   return (
@@ -199,6 +229,17 @@ const DashboardPage: React.FC = () => {
               <p className="text-[11px] text-slate-500 dark:text-slate-400">SCAN COVERAGE</p>
               <p className="text-3xl font-bold text-primary">82.8%</p>
               <p className="text-[10px] text-slate-400 mt-1 italic">Scan completed 14 minutes ago</p>
+            </div>
+            <div className="mt-6 pt-4 border-t border-slate-100 dark:border-slate-800">
+              <div className="flex items-center justify-between text-xs text-slate-600 dark:text-slate-400">
+                <span>HNDL Score (Top Asset)</span>
+                <span className="font-bold text-slate-900 dark:text-slate-100">{formatScore(topPqc?.hndl)}</span>
+              </div>
+              <div className="flex items-center justify-between text-xs text-slate-600 dark:text-slate-400 mt-2">
+                <span>Crypto Agility (Top Asset)</span>
+                <span className="font-bold text-slate-900 dark:text-slate-100">{formatScore(topPqc?.agility)}</span>
+              </div>
+              <p className="text-[10px] text-slate-400 mt-2">Top asset: {topPqc?.asset ?? 'n/a'}</p>
             </div>
           </div>
         </div>

@@ -21,6 +21,29 @@ interface PqcAnalysis {
   recommendations: string[];
   future_risk: string;
   agility: string;
+  future_risk_score?: number;
+  future_risk_drivers?: string[];
+  hndl_score?: {
+    score: number;
+    parameters?: Record<string, unknown>;
+    weights?: Record<string, number>;
+    formula?: string;
+  };
+  crypto_agility_score?: {
+    score: number;
+    parameters?: Record<string, unknown>;
+    weights?: Record<string, number>;
+    formula?: string;
+  };
+  pqc_ml_label?: string;
+  pqc_ml_confidence?: number;
+  false_positive_flag?: boolean;
+  remediation?: {
+    priority_score?: number;
+    priority_level?: string;
+    suggested_action?: string;
+    auto_fix_eligible?: boolean;
+  };
 }
 
 interface AssetApiItem {
@@ -262,6 +285,8 @@ const AssetManagementPage: React.FC = () => {
   const [cbomInput, setCbomInput] = useState('');
   const [showCbomModal, setShowCbomModal] = useState(false);
   const [cbomLoading, setCbomLoading] = useState(false);
+  const [reportLoading, setReportLoading] = useState(false);
+  const [showAdvanced, setShowAdvanced] = useState(false);
 
   const mapAssetStatus = (status: string): Asset['status'] => {
     switch (status) {
@@ -283,6 +308,27 @@ const AssetManagementPage: React.FC = () => {
     const date = new Date(value);
     if (Number.isNaN(date.getTime())) return 'Unknown';
     return date.toLocaleDateString();
+  };
+
+  const formatScore = (value?: number) => {
+    if (typeof value !== 'number' || Number.isNaN(value)) return '-';
+    return value.toFixed(1);
+  };
+
+  const renderKeyValueList = (data?: Record<string, unknown>) => {
+    if (!data || Object.keys(data).length === 0) {
+      return <div className="text-slate-400 text-xs">No details</div>;
+    }
+
+    return (
+      <ul className="text-xs text-slate-600 dark:text-slate-300 space-y-1">
+        {Object.entries(data).map(([key, value]) => (
+          <li key={key}>
+            <span className="font-semibold">{key}:</span> {String(value)}
+          </li>
+        ))}
+      </ul>
+    );
   };
 
   const getPqcStatusClass = (status: string) => {
@@ -339,6 +385,14 @@ const AssetManagementPage: React.FC = () => {
         recommendations: Array.isArray(data.recommendations) ? data.recommendations : [],
         future_risk: data.future_risk ?? 'UNKNOWN',
         agility: data.agility ?? 'UNKNOWN',
+        future_risk_score: typeof data.future_risk_score === 'number' ? data.future_risk_score : undefined,
+        future_risk_drivers: Array.isArray(data.future_risk_drivers) ? data.future_risk_drivers : [],
+        hndl_score: data.hndl_score,
+        crypto_agility_score: data.crypto_agility_score,
+        pqc_ml_label: data.pqc_ml_label,
+        pqc_ml_confidence: typeof data.pqc_ml_confidence === 'number' ? data.pqc_ml_confidence : undefined,
+        false_positive_flag: typeof data.false_positive_flag === 'boolean' ? data.false_positive_flag : undefined,
+        remediation: data.remediation,
       };
 
       setAssets((prevAssets) =>
@@ -389,6 +443,27 @@ const AssetManagementPage: React.FC = () => {
       alert('Invalid JSON or API error');
     } finally {
       setCbomLoading(false);
+    }
+  };
+
+  const handleDownloadReport = async () => {
+    if (!selectedAssetId) return;
+    try {
+      setReportLoading(true);
+      const blob = await assetsAPI.getAssetReport(selectedAssetId, 'pdf') as Blob;
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `pqc_report_${selectedAssetId}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Failed to download report', error);
+      alert('Failed to download report.');
+    } finally {
+      setReportLoading(false);
     }
   };
 
@@ -452,6 +527,8 @@ const AssetManagementPage: React.FC = () => {
       };
     });
   }, [assets, pqcByAssetId]);
+
+  const selectedPqc = selectedAssetId ? pqcByAssetId[selectedAssetId] : null;
 
   const getRiskColor = (score: number) => {
     if (score < 4) return 'text-emerald-500 bg-emerald-500/10 border-emerald-500/20';
@@ -549,9 +626,16 @@ const AssetManagementPage: React.FC = () => {
                   ) : hasError || !hasPqc ? (
                     <span className="text-xs text-slate-400">No PQC data</span>
                   ) : (
-                    <span className={`px-2 py-1 rounded text-[10px] font-black uppercase tracking-tighter border ${getPqcStatusClass(pqc.pqc_status)}`}>
-                      {pqc.pqc_status}
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <span className={`px-2 py-1 rounded text-[10px] font-black uppercase tracking-tighter border ${getPqcStatusClass(pqc.pqc_status)}`}>
+                        {pqc.pqc_status}
+                      </span>
+                      {pqc.false_positive_flag ? (
+                        <span className="px-2 py-0.5 rounded text-[9px] font-bold uppercase border border-amber-500/40 text-amber-500 bg-amber-500/10">
+                          Possible FP
+                        </span>
+                      ) : null}
+                    </div>
                   )}
                 </td>
                 <td className="px-6 py-4">
@@ -673,38 +757,62 @@ const AssetManagementPage: React.FC = () => {
                 <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">PQC Analysis</h3>
                 <p className="text-xs text-slate-500">Asset: {assets.find((a) => a.id === selectedAssetId)?.name || 'Unknown'}</p>
               </div>
-              <button
-                onClick={() => setIsPqcModalOpen(false)}
-                className="p-1 hover:bg-slate-200 dark:hover:bg-primary/20 rounded text-slate-500"
-              >
-                <span className="material-symbols-outlined">close</span>
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={handleDownloadReport}
+                  disabled={reportLoading || !selectedAssetId}
+                  className="px-3 py-1.5 border border-slate-200 dark:border-primary/30 rounded text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-primary/10 disabled:opacity-50"
+                >
+                  {reportLoading ? 'Preparing...' : 'Download Report'}
+                </button>
+                <button
+                  onClick={() => {
+                    setIsPqcModalOpen(false);
+                    setShowAdvanced(false);
+                  }}
+                  className="p-1 hover:bg-slate-200 dark:hover:bg-primary/20 rounded text-slate-500"
+                >
+                  <span className="material-symbols-outlined">close</span>
+                </button>
+              </div>
             </div>
             <div className="p-6 space-y-4 text-sm">
               {selectedAssetId && pqcLoading[selectedAssetId] ? (
                 <div className="text-slate-500">Loading...</div>
-              ) : selectedAssetId && (pqcError[selectedAssetId] || !pqcByAssetId[selectedAssetId]) ? (
+              ) : selectedAssetId && (pqcError[selectedAssetId] || !selectedPqc) ? (
                 <div className="text-slate-500">No PQC data</div>
               ) : (
                 <>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="p-3 rounded-lg border border-slate-200 dark:border-primary/20">
                       <div className="text-xs uppercase tracking-wider text-slate-400">Future Risk</div>
-                      <div className="text-base font-bold text-slate-900 dark:text-slate-100">{selectedAssetId ? pqcByAssetId[selectedAssetId]?.future_risk : '-'}</div>
+                      <div className="text-base font-bold text-slate-900 dark:text-slate-100">{selectedPqc?.future_risk ?? '-'}</div>
+                      <div className="text-[10px] text-slate-400">Score: {formatScore(selectedPqc?.future_risk_score)}</div>
                     </div>
                     <div className="p-3 rounded-lg border border-slate-200 dark:border-primary/20">
                       <div className="text-xs uppercase tracking-wider text-slate-400">Agility</div>
-                      <div className="text-base font-bold text-slate-900 dark:text-slate-100">{selectedAssetId ? pqcByAssetId[selectedAssetId]?.agility : '-'}</div>
+                      <div className="text-base font-bold text-slate-900 dark:text-slate-100">{selectedPqc?.agility ?? '-'}</div>
+                      <div className="text-[10px] text-slate-400">Score: {formatScore(selectedPqc?.crypto_agility_score?.score)}</div>
+                    </div>
+                    <div className="p-3 rounded-lg border border-slate-200 dark:border-primary/20">
+                      <div className="text-xs uppercase tracking-wider text-slate-400">HNDL Score</div>
+                      <div className="text-base font-bold text-slate-900 dark:text-slate-100">{formatScore(selectedPqc?.hndl_score?.score)}</div>
+                      <div className="text-[10px] text-slate-400">Harvest now, decrypt later</div>
+                    </div>
+                    <div className="p-3 rounded-lg border border-slate-200 dark:border-primary/20">
+                      <div className="text-xs uppercase tracking-wider text-slate-400">Crypto Agility</div>
+                      <div className="text-base font-bold text-slate-900 dark:text-slate-100">{formatScore(selectedPqc?.crypto_agility_score?.score)}</div>
+                      <div className="text-[10px] text-slate-400">Upgrade flexibility</div>
                     </div>
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
                       <div className="text-xs uppercase tracking-wider text-slate-400 mb-2">Weak Points</div>
                       <ul className="space-y-1 text-slate-700 dark:text-slate-300">
-                        {(selectedAssetId ? pqcByAssetId[selectedAssetId]?.weak_points : [])?.map((item, idx) => (
+                        {(selectedPqc?.weak_points ?? []).map((item, idx) => (
                           <li key={`weak-${idx}`}>• {item}</li>
                         ))}
-                        {(selectedAssetId ? pqcByAssetId[selectedAssetId]?.weak_points : [])?.length === 0 && (
+                        {(selectedPqc?.weak_points ?? []).length === 0 && (
                           <li className="text-slate-400">None reported</li>
                         )}
                       </ul>
@@ -712,14 +820,68 @@ const AssetManagementPage: React.FC = () => {
                     <div>
                       <div className="text-xs uppercase tracking-wider text-slate-400 mb-2">Recommendations</div>
                       <ul className="space-y-1 text-slate-700 dark:text-slate-300">
-                        {(selectedAssetId ? pqcByAssetId[selectedAssetId]?.recommendations : [])?.map((item, idx) => (
+                        {(selectedPqc?.recommendations ?? []).map((item, idx) => (
                           <li key={`rec-${idx}`}>• {item}</li>
                         ))}
-                        {(selectedAssetId ? pqcByAssetId[selectedAssetId]?.recommendations : [])?.length === 0 && (
+                        {(selectedPqc?.recommendations ?? []).length === 0 && (
                           <li className="text-slate-400">None reported</li>
                         )}
                       </ul>
                     </div>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      <div className="text-xs uppercase tracking-wider text-slate-400 mb-2">ML Assessment</div>
+                      <div className="text-sm text-slate-700 dark:text-slate-300">Label: {selectedPqc?.pqc_ml_label ?? '-'}</div>
+                      <div className="text-sm text-slate-700 dark:text-slate-300">Confidence: {selectedPqc?.pqc_ml_confidence ?? '-'}</div>
+                      <div className="text-sm text-slate-700 dark:text-slate-300">False Positive: {selectedPqc?.false_positive_flag ? 'Yes' : 'No'}</div>
+                    </div>
+                    <div>
+                      <div className="text-xs uppercase tracking-wider text-slate-400 mb-2">Remediation</div>
+                      <div className="text-sm text-slate-700 dark:text-slate-300">Priority: {selectedPqc?.remediation?.priority_level ?? '-'}</div>
+                      <div className="text-sm text-slate-700 dark:text-slate-300">Action: {selectedPqc?.remediation?.suggested_action ?? '-'}</div>
+                    </div>
+                  </div>
+                  <div className="pt-4 border-t border-slate-200 dark:border-primary/20">
+                    <button
+                      onClick={() => setShowAdvanced((prev) => !prev)}
+                      className="text-xs font-bold text-primary hover:underline"
+                    >
+                      {showAdvanced ? 'Hide Advanced Details' : 'Show Advanced Details'}
+                    </button>
+                    {showAdvanced && (
+                      <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                          <div className="text-xs uppercase tracking-wider text-slate-400 mb-2">HNDL Parameters</div>
+                          {renderKeyValueList(selectedPqc?.hndl_score?.parameters as Record<string, unknown>)}
+                        </div>
+                        <div>
+                          <div className="text-xs uppercase tracking-wider text-slate-400 mb-2">HNDL Weights</div>
+                          {renderKeyValueList(selectedPqc?.hndl_score?.weights as Record<string, unknown>)}
+                          <div className="text-[10px] text-slate-400 mt-2">Formula: {selectedPqc?.hndl_score?.formula ?? '-'}</div>
+                        </div>
+                        <div>
+                          <div className="text-xs uppercase tracking-wider text-slate-400 mb-2">Agility Parameters</div>
+                          {renderKeyValueList(selectedPqc?.crypto_agility_score?.parameters as Record<string, unknown>)}
+                        </div>
+                        <div>
+                          <div className="text-xs uppercase tracking-wider text-slate-400 mb-2">Agility Weights</div>
+                          {renderKeyValueList(selectedPqc?.crypto_agility_score?.weights as Record<string, unknown>)}
+                          <div className="text-[10px] text-slate-400 mt-2">Formula: {selectedPqc?.crypto_agility_score?.formula ?? '-'}</div>
+                        </div>
+                        <div>
+                          <div className="text-xs uppercase tracking-wider text-slate-400 mb-2">Future Risk Drivers</div>
+                          <ul className="text-xs text-slate-600 dark:text-slate-300 space-y-1">
+                            {(selectedPqc?.future_risk_drivers ?? []).map((item, idx) => (
+                              <li key={`driver-${idx}`}>• {item}</li>
+                            ))}
+                            {(selectedPqc?.future_risk_drivers ?? []).length === 0 && (
+                              <li className="text-slate-400">No drivers reported</li>
+                            )}
+                          </ul>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </>
               )}

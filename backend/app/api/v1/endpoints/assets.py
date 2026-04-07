@@ -16,6 +16,7 @@ import uuid
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
+from pydantic import BaseModel, Field
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -34,6 +35,7 @@ from app.schemas.asset import (
 )
 from app.pqc_engine.parser import parse_cbom
 from app.services.pqc_service import PQCService, run_pqc_analysis
+from app.services.report_service import build_report_payload, render_report_pdf
 from app.workers.tasks.discovery import (
     ingest_seed_domain,
     run_amass_discovery,
@@ -41,6 +43,72 @@ from app.workers.tasks.discovery import (
 )
 
 router = APIRouter(prefix="/assets", tags=["Asset Discovery"])
+
+
+async def _resolve_cbom_data(
+    asset_id: str,
+    db: AsyncSession,
+) -> tuple[str, dict, MasterAsset | None]:
+    try:
+        asset_uuid = uuid.UUID(asset_id)
+    except ValueError:
+        mock_components = [
+            {
+                "name": f"mock-asset-{asset_id}",
+                "type": "cryptographic-asset",
+                "properties": [
+                    {"name": "tls_version", "value": "TLS 1.2"},
+                    {"name": "cipher", "value": "AES-256-GCM"},
+                    {"name": "key_exchange", "value": "ECDHE"},
+                    {"name": "signature_algorithm", "value": "RSA-PSS"},
+                    {"name": "key_size", "value": "2048"},
+                    {"name": "certificate_algorithm", "value": "RSA"},
+                ],
+            }
+        ]
+        return asset_id, {"components": mock_components}, None
+
+    result = await db.execute(
+        select(MasterAsset).where(MasterAsset.id == asset_uuid)
+    )
+    asset = result.scalar_one_or_none()
+    if asset is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Asset {asset_id} not found.",
+        )
+
+    cbom_result = await db.execute(
+        select(CBOMRecord).where(CBOMRecord.asset_id == asset_uuid)
+    )
+    records = cbom_result.scalars().all()
+
+    components: list[dict] = []
+    for record in records:
+        if record.cyclonedx_component:
+            components.append(record.cyclonedx_component)
+
+    if not components:
+        components = [
+            {
+                "name": asset.asset_value,
+                "type": "cryptographic-asset",
+                "properties": [
+                    {"name": "tls_version", "value": "TLS 1.2"},
+                    {"name": "cipher", "value": "AES-256-GCM"},
+                    {"name": "key_exchange", "value": "ECDHE"},
+                    {"name": "signature_algorithm", "value": "RSA-PSS"},
+                    {"name": "key_size", "value": "2048"},
+                    {"name": "certificate_algorithm", "value": "RSA"},
+                ],
+            }
+        ]
+
+    return str(asset_uuid), {"components": components}, asset
+
+
+class PqcBatchRequest(BaseModel):
+    asset_ids: list[str] = Field(..., min_length=1, description="Asset IDs for batch PQC analysis")
 
 
 # ── POST /assets/seed-domains ────────────────────────────────────────────────
@@ -214,76 +282,37 @@ async def get_asset_pqc(
     asset_id: str,
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> dict:
-    try:
-        asset_uuid = uuid.UUID(asset_id)
-    except ValueError:
-        mock_components = [
-            {
-                "name": f"mock-asset-{asset_id}",
-                "type": "cryptographic-asset",
-                "properties": [
-                    {"name": "tls_version", "value": "TLS 1.2"},
-                    {"name": "cipher", "value": "AES-256-GCM"},
-                    {"name": "key_exchange", "value": "ECDHE"},
-                    {"name": "signature_algorithm", "value": "RSA-PSS"},
-                    {"name": "key_size", "value": "2048"},
-                    {"name": "certificate_algorithm", "value": "RSA"},
-                ],
-            }
-        ]
-
-        cbom_data = {"components": mock_components}
-        analysis = PQCService.analyze_cbom(cbom_data)
-
-        return {
-            "asset_id": asset_id,
-            **analysis,
-        }
-
-    result = await db.execute(
-        select(MasterAsset).where(MasterAsset.id == asset_uuid)
-    )
-    asset = result.scalar_one_or_none()
-    if asset is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Asset {asset_id} not found.",
-        )
-
-    cbom_result = await db.execute(
-        select(CBOMRecord).where(CBOMRecord.asset_id == asset_uuid)
-    )
-    records = cbom_result.scalars().all()
-
-    components: list[dict] = []
-    for record in records:
-        if record.cyclonedx_component:
-            components.append(record.cyclonedx_component)
-
-    if not components:
-        # Minimal mock CycloneDX CBOM component for safe fallback
-        components = [
-            {
-                "name": asset.asset_value,
-                "type": "cryptographic-asset",
-                "properties": [
-                    {"name": "tls_version", "value": "TLS 1.2"},
-                    {"name": "cipher", "value": "AES-256-GCM"},
-                    {"name": "key_exchange", "value": "ECDHE"},
-                    {"name": "signature_algorithm", "value": "RSA-PSS"},
-                    {"name": "key_size", "value": "2048"},
-                    {"name": "certificate_algorithm", "value": "RSA"},
-                ],
-            }
-        ]
-
-    cbom_data = {"components": components}
+    resolved_id, cbom_data, _asset = await _resolve_cbom_data(asset_id, db)
     analysis = PQCService.analyze_cbom(cbom_data)
 
     return {
-        "asset_id": str(asset_uuid),
+        "asset_id": resolved_id,
         **analysis,
     }
+
+
+@router.post(
+    "/pqc/batch",
+    summary="Batch PQC analysis for multiple assets",
+)
+async def batch_asset_pqc(
+    payload: PqcBatchRequest,
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> dict:
+    results: dict[str, dict] = {}
+
+    for asset_id in payload.asset_ids:
+        try:
+            resolved_id, cbom_data, _asset = await _resolve_cbom_data(asset_id, db)
+            analysis = PQCService.analyze_cbom(cbom_data)
+            results[asset_id] = {
+                "asset_id": resolved_id,
+                **analysis,
+            }
+        except HTTPException as exc:
+            results[asset_id] = {"error": exc.detail}
+
+    return {"items": results}
 
 
 @router.post(
@@ -344,9 +373,56 @@ async def upload_cbom(
             "recommendations": result.get("recommendations"),
             "future_risk": result.get("future_risk"),
             "agility": result.get("agility"),
+            "future_risk_score": result.get("future_risk_score"),
+            "future_risk_drivers": result.get("future_risk_drivers"),
+            "hndl_score": result.get("hndl_score"),
+            "crypto_agility_score": result.get("crypto_agility_score"),
+            "pqc_ml_label": result.get("pqc_ml_label"),
+            "pqc_ml_confidence": result.get("pqc_ml_confidence"),
+            "false_positive_flag": result.get("false_positive_flag"),
+            "remediation": result.get("remediation"),
         }
     except Exception as exc:
         return {"error": str(exc)}
+
+
+@router.get(
+    "/{asset_id}/report",
+    summary="Download PQC report for an asset (PDF or JSON)",
+)
+async def get_asset_report(
+    asset_id: str,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    report_format: str = Query("json", alias="format"),
+) -> Response | dict:
+    if report_format not in {"json", "pdf"}:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="format must be 'json' or 'pdf'",
+        )
+
+    resolved_id, cbom_data, asset = await _resolve_cbom_data(asset_id, db)
+    analysis = PQCService.analyze_cbom(cbom_data)
+
+    asset_payload = {
+        "id": resolved_id,
+        "asset_value": asset.asset_value if asset else resolved_id,
+        "asset_type": asset.asset_type if asset else "domain",
+        "organization": asset.organization if asset else None,
+        "status": asset.status if asset else "unknown",
+    }
+
+    report = build_report_payload(asset_payload, analysis)
+    if report_format == "json":
+        return report
+
+    pdf_bytes = render_report_pdf(report)
+    filename = f"pqc_report_{resolved_id}.pdf"
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f"attachment; filename={filename}"},
+    )
 
 @router.get(
     "/{asset_id}",

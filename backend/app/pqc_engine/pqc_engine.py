@@ -5,6 +5,13 @@ from __future__ import annotations
 from typing import Any
 
 from .parser import parse_cbom
+from .advanced_scoring import (
+    compute_crypto_agility_score,
+    compute_future_risk,
+    compute_hndl_score,
+    compute_ml_assessment,
+    compute_remediation_priority,
+)
 
 
 _WEIGHTS = {
@@ -269,13 +276,29 @@ def analyze_pqc(cbom_data: dict[str, Any]) -> dict[str, Any]:
     else:
         agility = "LOW"
 
+    hndl_score = compute_hndl_score(cbom_data, best_props)
+    crypto_agility_score = compute_crypto_agility_score(cbom_data, best_props)
+    future_policy = compute_future_risk(cbom_data, best_props)
+    ml_assessment = compute_ml_assessment(best_props)
+    rule_label = "PQC_READY" if best_status == "PQC_READY" else "NOT_READY"
+    false_positive_flag = rule_label != ml_assessment.get("label")
+    remediation = compute_remediation_priority(best_score, hndl_score["score"], cbom_data, best_props)
+
     return {
         "pqc_status": best_status,
         "risk_score": round(best_score, 2),
         "weak_points": weak_points,
         "recommendations": recommendations,
         "future_risk": future_risk,
+        "future_risk_score": future_policy.get("score"),
+        "future_risk_drivers": future_policy.get("drivers", []),
         "agility": agility,
+        "hndl_score": hndl_score,
+        "crypto_agility_score": crypto_agility_score,
+        "pqc_ml_label": ml_assessment.get("label"),
+        "pqc_ml_confidence": ml_assessment.get("confidence"),
+        "false_positive_flag": false_positive_flag,
+        "remediation": remediation,
     }
 
 
