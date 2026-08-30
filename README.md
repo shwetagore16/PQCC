@@ -1,4 +1,4 @@
-# PQCC (Post Quantum Cryptography Checker)
+#QuantumShield/ PQCC (Post Quantum Cryptography Checker)
 
 PQCC is a full-stack platform that helps security and infrastructure teams assess cryptographic risk, generate CBOM intelligence, and plan migration toward post-quantum cryptography (PQC).
 
